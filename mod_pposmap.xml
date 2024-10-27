@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <extension type="module" client="site" method="upgrade">
     <name>MOD_PPOSMAP_NAME</name>
-    <version>1.0.6</version>
+    <version>1.0.0</version>
     <author>pablop76</author>
     <creationDate>27.10.2024</creationDate>
     <description>MOD_PPOSMAP_DESCRIPTION</description>
@@ -129,6 +129,6 @@
     <updateservers>
         <!-- Change the URL below to match that of your own update development environment -->
         <server type="extension" name="Pposmap Module Updates">
-            http://web-service.com.pl/joomla/updateserver/mapbox/updates.xml</server>
+            http://web-service.com.pl/joomla/updateserver/pposmap/updates.xml</server>
     </updateservers>
 </extension>
