@@ -1,0 +1,63 @@
+{
+  "$schema": "https://developer.joomla.org/schemas/json-schema/web_assets.json",
+  "name": "mod_pposmap",
+  "version": "1.0.0",
+  "description": "Joomla Module OpenStreetMap",
+  "license": "GPL-2.0-or-later",
+  "assets": [
+    {
+      "name": "leafletjs",
+      "type": "script",
+      "uri": "https://unpkg.com/leaflet@1.9.4/dist/leaflet.js",
+      "dependencies": [
+        "core"
+      ],
+      "attributes": {
+        "type": "module"
+      },
+      "version": "1.0.0"
+    },
+    {
+      "name": "mod_pposmap.custom",
+      "type": "script",
+      "uri": "mod_pposmap/custom.js",
+      "dependencies": [
+        "core"
+      ],
+      "attributes": {
+        "type": "module"
+      },
+      "version": "1.0.0"
+    },
+    {
+      "name": "mapbox",
+      "type": "script",
+      "uri": "mod_pposmap/mapbox.js",
+      "dependencies": [
+        "core"
+      ],
+      "attributes": {
+        "type": "module"
+      },
+      "version": "1.0.0"
+    },
+    {
+      "name": "leafletcss",
+      "type": "style",
+      "uri": "https://unpkg.com/leaflet@1.9.4/dist/leaflet.css",
+      "version": "1.0.0"
+    },
+    {
+      "name": "mod_pposmap.style",
+      "type": "style",
+      "uri": "mod_pposmap/style.css",
+      "version": "1.0.0"
+    },
+    {
+      "name": "stylemapbox",
+      "type": "style",
+      "uri": "mod_pposmap/mapbox.css",
+      "version": "1.0.0"
+    }
+  ]
+}

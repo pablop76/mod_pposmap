@@ -1,0 +1,59 @@
+.table-mapbox tr{
+    cursor: pointer;
+}
+.mapbox-popup-title{
+    color: var(--card-cap-color);
+}
+.mapbox-popup-description{
+    color: var(--body-color);
+}
+#map{
+    min-height: 500px;
+    width: 100%;
+}
+#map .mapboxgl-popup-content {
+    background: #fff;
+    border-radius: 3px;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+    padding: 20px 10px 15px;
+    pointer-events: auto;
+    position: relative;
+}
+.marker {
+    background-position: center;
+}
+.flex-container {
+    display: flex;
+    flex-direction: row;
+  }
+  
+.list-items-container {
+    max-height: 500px;
+    width: 30%;
+    overflow: auto;
+    scrollbar-color: rgba(0, 0, 0, 0.1) white;
+    scrollbar-width: thin;
+}
+.list-item{
+    background-color: #F7F7F7;
+    padding: 10px;
+    margin:0 10px 10px;
+    cursor: pointer;
+}
+.list-item:hover{
+    box-shadow: rgba(149, 157, 165, 0.2) 0px 4px 9px;
+}
+  /* Responsive layout - makes a one column layout instead of a two-column layout */
+  @media (max-width: 800px) {
+    .flex-container {
+      flex-direction: column;
+      
+    }
+    .list-items-container {
+        max-height: 500px;
+        width: 100%;
+        overflow: auto;
+        scrollbar-color: rgba(0, 0, 0, 0.1) white;
+        scrollbar-width: thin;
+    }
+  }
