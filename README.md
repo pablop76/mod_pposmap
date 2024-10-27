@@ -1,4 +1,4 @@
-Joomla-Module-OpenStreetMap
+Joomla Module OpenStreetMap
 =====================
 
 This is an module files for [Joomla!](http://joomla.org/) CMS.
