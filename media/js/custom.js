@@ -2,14 +2,17 @@ if (!window.Joomla) {
   throw new Error("Joomla API was not properly initialised");
 }
 
-const { tokenmapbox } = Joomla.getOptions("mod_pposmap.vars");
-const { stylemapbox } = Joomla.getOptions("mod_pposmap.vars");
-const { listofpoints } = Joomla.getOptions("mod_pposmap.vars");
-const { zoommapbox } = Joomla.getOptions("mod_pposmap.vars");
-const { geotitle } = Joomla.getOptions("mod_pposmap.vars");
-const { geodescription } = Joomla.getOptions("mod_pposmap.vars");
-const { markermapbox } = Joomla.getOptions("mod_pposmap.vars");
-const { mapboxorleaflet } = Joomla.getOptions("mod_pposmap.vars");
+const { 
+  tokenmapbox,
+  stylemapbox,
+  listofpoints,
+  zoommapbox,
+  markermapbox,
+  mapboxorleaflet,
+  groupscontrol,
+  allFilterLeaflet
+ } = Joomla.getOptions("mod_pposmap.vars");
+ console.log(allFilterLeaflet);
 document.addEventListener("DOMContentLoaded", function () {
   let originalData = listofpoints;
   // Iteracja po istniejących punktach
@@ -30,6 +33,7 @@ document.addEventListener("DOMContentLoaded", function () {
         description: point.geodescription,
         popupimage: point.popupimage,
       },
+      groupname: point.layergroup,
     };
 
     // Dodawanie nowego obiektu do tablicy features
@@ -41,6 +45,7 @@ document.addEventListener("DOMContentLoaded", function () {
     type: "FeatureCollection",
     features: features,
   };
+
   if (mapboxorleaflet == "0") {
     mapboxgl.accessToken = tokenmapbox;
 
@@ -156,38 +161,83 @@ document.addEventListener("DOMContentLoaded", function () {
       popup = new mapboxgl.Popup().setLngLat(coordinates).setHTML(`${popupimage()}<h3 class="mapbox-popup-title">${title}</h3><p class="mapbox-popup-description">${description}</p>`).addTo(map);
     });
   } else {
-    var map = L.map("map").setView([features[0].geometry.coordinates[1], features[0].geometry.coordinates[0]], zoommapbox);
+    if (groupscontrol == "0") {
+      var markers = [];
+      var customIcon = L.icon({
+        iconUrl: "/" + markermapbox.imagefile,
+        iconSize: [50, 'auto'], // size of the icon
+        iconAnchor: [27, 64], // point of the icon which will correspond to marker's location
+        popupAnchor: [0, 0], // point from which the popup should open relative to the iconAnchor
+      });
 
-    L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
-      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
-    }).addTo(map);
-    // custom marker
-    var greenIcon = L.icon({
-      iconUrl: "/" + markermapbox.imagefile,
-      iconSize: [50, 'auto'], // size of the icon
-      iconAnchor: [27, 64], // point of the icon which will correspond to marker's location
-      popupAnchor: [0, 0], // point from which the popup should open relative to the iconAnchor
-    });
+      for (let i = 0; i < features.length; i++) {
+        console.log(listofpoints[i].markersingleitem.imagefile);
+        let datacontent = `<img src=/${features[i].properties.popupimage.imagefile}><h3>${features[i].properties.title}</h3><p>${features[i].properties.description}</p>`;
+        markers.push(L.marker([features[i].geometry.coordinates[1], features[i].geometry.coordinates[0]], { icon: customIcon }).bindPopup(datacontent));
+      }
 
-    for (let i = 0; i < features.length; i++) {
-      let datacontent = `<img src=/${features[i].properties.popupimage.imagefile}><h3>${features[i].properties.title}</h3><p>${features[i].properties.description}</p>`;
-      L.marker([features[i].geometry.coordinates[1], features[i].geometry.coordinates[0]], { icon: greenIcon }).addTo(map).bindPopup(datacontent);
-    }
-    const tableMapbox = document.querySelector(".table-pposmap");
-    tableMapbox.addEventListener("click", (e) => {
-      const tableElement = e.target.parentNode;
-      const coordinates = features[tableElement.dataset.index - 1].geometry.coordinates;
-      const title = features[tableElement.dataset.index - 1].properties.title;
-      const description = features[tableElement.dataset.index - 1].properties.description;
-      const popupimage = function () {
-        if (features[tableElement.dataset.index - 1].properties.popupimage.imagefile) {
-          return `<img src=/${features[tableElement.dataset.index - 1].properties.popupimage.imagefile}/>`;
-        } else {
-          return "";
+      var allMarkers = L.layerGroup(markers);
+      var osm = L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
+        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+      });
+
+      var map = L.map("map", {
+        center: [features[0].geometry.coordinates[1], features[0].geometry.coordinates[0]],
+        zoom: zoommapbox,
+        layers: [osm, allMarkers],
+      });
+    } else {
+      var markers = [];
+      var customIcon = L.icon({
+        iconUrl: "/" + markermapbox.imagefile,
+        iconSize: [50, 'auto'], // size of the icon
+        iconAnchor: [27, 64], // point of the icon which will correspond to marker's location
+        popupAnchor: [0, 0], // point from which the popup should open relative to the iconAnchor
+      });
+
+      for (let i = 0; i < features.length; i++) {
+        let datacontent = `<img src=/${features[i].properties.popupimage.imagefile}><h3>${features[i].properties.title}</h3><p>${features[i].properties.description}</p>`;
+        markers.push(L.marker([features[i].geometry.coordinates[1], features[i].geometry.coordinates[0]], { icon: customIcon }).bindPopup(datacontent));
+      }
+
+      var allMarkers = L.layerGroup(markers);
+      var osm = L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
+        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+      });
+
+      var map = L.map("map", {
+        center: [features[0].geometry.coordinates[1], features[0].geometry.coordinates[0]],
+        zoom: zoommapbox,
+        layers: [osm, allMarkers],
+      });
+      // Set the marker point centrally by clicking on the list outside the map
+      const tableMapbox = document.querySelector(".table-pposmap");
+      tableMapbox.addEventListener("click", (e) => {
+        const tableElement = e.target.parentNode;
+        const coordinates = features[tableElement.dataset.index - 1].geometry.coordinates;
+        console.log(coordinates);
+        map.setView(new L.LatLng(coordinates[1], coordinates[0]),zoommapbox);
+        L.popup(new L.LatLng(coordinates[1], coordinates[0]), { content: `<img src=/${features[tableElement.dataset.index - 1].properties.popupimage.imagefile}><h3>${features[tableElement.dataset.index - 1].properties.title}</h3><p>${features[tableElement.dataset.index - 1].properties.description}</p>` }).openOn(map);
+      });
+
+      const result = features.reduce((acc, item) => {
+        const group = item.groupname;
+        const datacontent = `<img src=/${item.properties.popupimage.imagefile}><h3>${item.properties.title}</h3><p>${item.properties.description}</p>`;
+        const value = L.marker([item.geometry.coordinates[1], item.geometry.coordinates[0]], { icon: customIcon }).bindPopup(datacontent);
+        if (!acc[group]) {
+          acc[group] = [];
         }
-      };
-      const popupContent = `${popupimage()}<h3>${title}</h3><p>${description}</p>`;
-      L.marker([coordinates[1], coordinates[0]], { icon: greenIcon }).addTo(map).bindPopup(popupContent).openPopup();
-    });
+        acc[group].push(value);
+        return acc;
+      }, {});
+      function layerGroup(value) {
+        return L.layerGroup(value);
+      }
+      const createLayerGroup = Object.fromEntries(Object.entries(result).map(([key, value]) => [key, layerGroup(value)]));
+
+      createLayerGroup[allFilterLeaflet] = allMarkers;
+      const newObjLayerGroup = { [allFilterLeaflet]: allMarkers, ...createLayerGroup };
+      L.control.layers(null, newObjLayerGroup).addTo(map);
+    }
   }
 });

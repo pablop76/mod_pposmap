@@ -55,6 +55,17 @@
                 >
                 </field>
                 <field
+                    name="groupscontrol"
+                    showon="mapboxorleaflet:1"
+                    type="radio"
+                    default="0"
+                    label="MOD_PPOSMAP_LAYER_GROUPS"
+                    description=""
+                    layout="joomla.form.field.radio.switcher">
+                    <option value="0">JHIDE</option>
+                    <option value="1">JSHOW</option>
+                </field>
+                <field
                     name="listofpoints"
                     type="subform"
                     label="MOD_PPOSMAP_SUBFORM_FIELD"
@@ -93,6 +104,13 @@
                             type="accessiblemedia"
                             directory="stories"
                             label="Dodaj zdjęcie do popup markera" />
+                        <field
+                            name="layergroup"
+                            type="text"
+                            label="MOD_PPOSMAP_LAYER_GROUP_NAME"
+                            showon="groupscontrol:0"
+                        >
+                        </field>
                     </form>
                 </field>
                 <field
