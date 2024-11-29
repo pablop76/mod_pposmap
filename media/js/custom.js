@@ -12,7 +12,6 @@ const {
   groupscontrol,
   allFilterLeaflet
  } = Joomla.getOptions("mod_pposmap.vars");
- console.log(allFilterLeaflet);
 document.addEventListener("DOMContentLoaded", function () {
   let originalData = listofpoints;
   // Iteracja po istniejących punktach
@@ -171,7 +170,6 @@ document.addEventListener("DOMContentLoaded", function () {
       });
 
       for (let i = 0; i < features.length; i++) {
-        console.log(listofpoints[i].markersingleitem.imagefile);
         let datacontent = `<img src=/${features[i].properties.popupimage.imagefile}><h3>${features[i].properties.title}</h3><p>${features[i].properties.description}</p>`;
         markers.push(L.marker([features[i].geometry.coordinates[1], features[i].geometry.coordinates[0]], { icon: customIcon }).bindPopup(datacontent));
       }
