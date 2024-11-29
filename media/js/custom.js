@@ -164,7 +164,7 @@ document.addEventListener("DOMContentLoaded", function () {
     // custom marker
     var greenIcon = L.icon({
       iconUrl: "/" + markermapbox.imagefile,
-      iconSize: [50, 50], // size of the icon
+      iconSize: [50, 'auto'], // size of the icon
       iconAnchor: [27, 64], // point of the icon which will correspond to marker's location
       popupAnchor: [0, 0], // point from which the popup should open relative to the iconAnchor
     });
