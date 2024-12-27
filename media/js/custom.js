@@ -12,8 +12,8 @@ const {
   groupscontrol,
   allFilterLeaflet
  } = Joomla.getOptions("mod_pposmap.vars");
+ let originalData = listofpoints;
 document.addEventListener("DOMContentLoaded", function () {
-  let originalData = listofpoints;
   // Iteracja po istniejących punktach
   // Tworzymy tablicę, która będzie zawierać nowe obiekty typu "Feature"
   let features = [];
@@ -139,6 +139,7 @@ document.addEventListener("DOMContentLoaded", function () {
     });
     // Set the marker point centrally by clicking on the list outside the map
     const tableMapbox = document.querySelector(".table-pposmap");
+    console.log(tableMapbox);
     tableMapbox.addEventListener("click", (e) => {
       const tableElement = e.target.parentNode;
       const coordinates = features[tableElement.dataset.index - 1].geometry.coordinates;
@@ -160,6 +161,7 @@ document.addEventListener("DOMContentLoaded", function () {
       popup = new mapboxgl.Popup().setLngLat(coordinates).setHTML(`${popupimage()}<h3 class="mapbox-popup-title">${title}</h3><p class="mapbox-popup-description">${description}</p>`).addTo(map);
     });
   } else {
+
     if (groupscontrol == "0") {
       var markers = [];
       var customIcon = L.icon({
@@ -183,6 +185,14 @@ document.addEventListener("DOMContentLoaded", function () {
         center: [features[0].geometry.coordinates[1], features[0].geometry.coordinates[0]],
         zoom: zoommapbox,
         layers: [osm, allMarkers],
+      });
+      const tableMapbox = document.querySelector(".table-pposmap");
+      tableMapbox.addEventListener("click", (e) => {
+        const tableElement = e.target.parentNode;
+        const coordinates = features[tableElement.dataset.index - 1].geometry.coordinates;
+        console.log(coordinates);
+        map.setView(new L.LatLng(coordinates[1], coordinates[0]),zoommapbox);
+        L.popup(new L.LatLng(coordinates[1], coordinates[0]), { content: `<img src=/${features[tableElement.dataset.index - 1].properties.popupimage.imagefile}><h3>${features[tableElement.dataset.index - 1].properties.title}</h3><p>${features[tableElement.dataset.index - 1].properties.description}</p>` }).openOn(map);
       });
     } else {
       var markers = [];
