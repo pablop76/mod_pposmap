@@ -185,6 +185,7 @@ document.addEventListener("DOMContentLoaded", function () {
         center: [features[0].geometry.coordinates[1], features[0].geometry.coordinates[0]],
         zoom: zoommapbox,
         layers: [osm, allMarkers],
+        scrollWheelZoom: false,
       });
       const tableMapbox = document.querySelector(".table-pposmap");
       tableMapbox.addEventListener("click", (e) => {
@@ -217,6 +218,7 @@ document.addEventListener("DOMContentLoaded", function () {
         center: [features[0].geometry.coordinates[1], features[0].geometry.coordinates[0]],
         zoom: zoommapbox,
         layers: [osm, allMarkers],
+        scrollWheelZoom: false,
       });
       // Set the marker point centrally by clicking on the list outside the map
       const tableMapbox = document.querySelector(".table-pposmap");
