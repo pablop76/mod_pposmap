@@ -13,7 +13,7 @@
 }
 
 #map {
-  height: var(--pposmap-height, 100%);
+  height: var(--pposmap-height, 500px);
   min-height: var(--pposmap-height, 500px);
   width: 100%;
 }
@@ -108,7 +108,7 @@ h3.location {
     min-height: var(--pposmap-height-mobile, var(--pposmap-height, 400px));
   }
   #map {
-    height: var(--pposmap-height-mobile, var(--pposmap-height, 100%));
+    height: var(--pposmap-height-mobile, var(--pposmap-height, 400px));
     min-height: var(--pposmap-height-mobile, var(--pposmap-height, 400px));
   }
   .list-items-container {
