@@ -7,8 +7,8 @@
 .mapbox-popup-description {
   color: var(--body-color);
 }
-#map,
-.list-items-container {
+
+.table-pposmap {
   --pposmap-height: 900px;
 }
 
@@ -103,8 +103,7 @@ h3.location {
   .flex-container {
     flex-direction: column;
   }
-  #map,
-  .list-items-container {
+  .table-pposmap {
     --pposmap-height: 500px;
   }
   .list-items-container {

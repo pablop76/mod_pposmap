@@ -23,6 +23,12 @@
     $pointslistmapbox         = $params->get('pointslistmapbox', '');
     $mapboxorleaflet          = $params->get('mapboxorleaflet', '');
     $groupscontrol            = $params->get('groupscontrol', '');
+    $mapHeightRaw             = trim((string) $params->get('mapheight', ''));
+
+    $mapHeightCss = '';
+    if ($mapHeightRaw !== '') {
+        $mapHeightCss = preg_match('/^\d+$/', $mapHeightRaw) ? ($mapHeightRaw . 'px') : $mapHeightRaw;
+    }
 
     $isMapbox = ((string) $mapboxorleaflet) === '0' || $mapboxorleaflet === '';
 
@@ -52,7 +58,7 @@
 
 ?>
 <!-- Start slideshow -->
-<div class="flex-container table-pposmap">
+<div class="flex-container table-pposmap"<?php echo $mapHeightCss !== '' ? ' style="--pposmap-height: ' . htmlspecialchars($mapHeightCss, ENT_QUOTES, 'UTF-8') . ';"' : ''; ?>>
     <?php if ($pointslistmapbox) {?>
     <div class="list-items-container uk-visible@m">
         <?php
