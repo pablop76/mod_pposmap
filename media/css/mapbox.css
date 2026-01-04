@@ -1,14 +1,5 @@
 #map {
   width: 100%;
-  height: 500px;
-}
-.marker {
-  background-image: url('https://docs.mapbox.com/demos/custom-markers-gl-js/mapbox-icon.png');
-  background-size: cover;
-  width: 50px;
-  height: 50px;
-  /* border-radius: 50%; */
-  cursor: pointer;
 }
 .mapboxgl-popup {
   max-width: 200px;

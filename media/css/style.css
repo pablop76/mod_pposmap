@@ -1,31 +1,63 @@
-.flex-container.table-pposmap{
-  width: 100%;
-  background-color: #fff;
-  color: #000;
-}
 .table-mapbox tr {
   cursor: pointer;
 }
 .mapbox-popup-title {
-  color: var(--card-cap-color);
+  color: var(--body-color);
 }
 .mapbox-popup-description {
   color: var(--body-color);
 }
+#map,
+.list-items-container {
+  --pposmap-height: 900px;
+}
+
 #map {
-  min-height: 500px;
+  height: var(--pposmap-height);
   width: 100%;
 }
+
+/* Mapbox GL: dopilnuj, żeby canvas wypełniał kontener #map */
+#map .mapboxgl-map,
+#map .mapboxgl-canvas {
+  width: 100%;
+  height: 100%;
+}
+
+/* Mapbox GL: popup obrazek jak w Leaflet */
+#map .mapboxgl-popup-content img {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+
+/* Mapbox GL: nasz marker (gdy używamy custom element) */
+.marker {
+  --pposmap-marker-width: 50px;
+  --pposmap-marker-height: 64px;
+
+  background-size: contain;
+  background-repeat: no-repeat;
+  background-position: center bottom;
+  width: var(--pposmap-marker-width);
+  height: var(--pposmap-marker-height);
+  cursor: pointer;
+}
 #map .mapboxgl-popup-content {
-  background: #fff;
+  background: var(--body-bg, #fff);
+  color: var(--body-color);
   border-radius: 3px;
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
   padding: 20px 10px 15px;
   pointer-events: auto;
   position: relative;
 }
-.marker {
-  background-position: center;
+
+/* Mapbox GL: linki w popup (np. tel) zawsze czytelne */
+#map .mapboxgl-popup-content a,
+#map .mapboxgl-popup-content a:hover,
+#map .mapboxgl-popup-content a:visited {
+  color: currentColor;
 }
 .flex-container {
   display: flex;
@@ -34,31 +66,52 @@
 }
 
 .list-items-container {
-  max-height: 500px;
-  width: 30%;
+  max-height: var(--pposmap-height);
+  width: 22%;
   overflow: auto;
   scrollbar-color: rgba(0, 0, 0, 0.1) white;
   scrollbar-width: thin;
+  padding-top: 25px;
 }
 .list-item {
+  /* display: flex;
+  justify-content: space-between;
+  align-items: flex-end; */
   background-color: #f7f7f7;
-  padding: 10px;
+  padding: 20px;
   margin: 0 10px 10px;
-  cursor: pointer;
+  border-top-left-radius: 50px;
+  border-bottom-right-radius: 50px;
+}
+h3.location {
+  font-family: "Courgette", cursive;
+  letter-spacing: 1px;
+  padding: 10px 0;
+  font-weight: normal;
+  padding-top: 0;
+  margin: 0;
 }
 .list-item:hover {
   box-shadow: rgba(149, 157, 165, 0.2) 0px 4px 9px;
+}
+
+.leaflet-popup-content img {
+  width: 100%;
 }
 /* Responsive layout - makes a one column layout instead of a two-column layout */
 @media (max-width: 800px) {
   .flex-container {
     flex-direction: column;
   }
+  #map,
   .list-items-container {
-    max-height: 500px;
+    --pposmap-height: 500px;
+  }
+  .list-items-container {
     width: 100%;
     overflow: auto;
     scrollbar-color: rgba(0, 0, 0, 0.1) white;
     scrollbar-width: thin;
+    padding-top: 25px;
   }
 }

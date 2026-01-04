@@ -13,20 +13,19 @@ return new class () implements InstallerScriptInterface {
 
     public function install(InstallerAdapter $adapter): bool
     {
-        Text::_('MOD_PPOSMAP_INSTALLEDTHANK')."<br>";
+        Factory::getApplication()->enqueueMessage(Text::_('MOD_PPOSMAP_INSTALLEDTHANK'));
         return true;
     }
 
     public function update(InstallerAdapter $adapter): bool
     {
-
-        Text::_('MOD_PPOSMAP_UPDATE')."<br>";
+        Factory::getApplication()->enqueueMessage(Text::_('MOD_PPOSMAP_UPDATE'));
         return true;
     }
 
     public function uninstall(InstallerAdapter $adapter): bool
     {
-        echo Text::_('MOD_PPOSMAP_UNINSTALLED')."<br>";
+        Factory::getApplication()->enqueueMessage(Text::_('MOD_PPOSMAP_UNINSTALLED'));
         return true;
     }
 
@@ -48,7 +47,7 @@ return new class () implements InstallerScriptInterface {
 
     public function postflight(string $type, InstallerAdapter $adapter): bool
     {
-        echo Text::_('MOD_PPOSMAP_PROCESS_COMPLETED')."<br>";
+        Factory::getApplication()->enqueueMessage(Text::_('MOD_PPOSMAP_PROCESS_COMPLETED'));
         return true;
     }
 };

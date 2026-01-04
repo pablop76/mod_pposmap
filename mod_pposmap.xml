@@ -60,7 +60,7 @@
                     type="radio"
                     default="0"
                     label="MOD_PPOSMAP_LAYER_GROUPS"
-                    description=""
+                    description="MOD_PPOSMAP_DESRIPTION_GROUPS"
                     layout="joomla.form.field.radio.switcher">
                     <option value="0">JHIDE</option>
                     <option value="1">JSHOW</option>
@@ -71,8 +71,6 @@
                     label="MOD_PPOSMAP_SUBFORM_FIELD"
                     description="Subform Field Description"
                     multiple="true"
-                    min="1"
-                    max="10"
                 >
                     <form>
                         <field
@@ -91,12 +89,29 @@
                             name="geotitle"
                             type="text"
                             label="MOD_PPOSMAP_GEOTITLE"
+                            filter="raw"
                         >
                         </field>
                         <field
                             name="geodescription"
                             type="text"
                             label="MOD_PPOSMAP_GEODESCRIPTION"
+                            filter="raw"
+                        >
+                        <field
+                            name="openinghours"
+                            type="text"
+                            label="MOD_PPOSMAP_OPENINGHOURS"
+                            filter="raw"
+                        >
+                        </field>
+                        </field>
+                        <field
+                            name="telephonevalue"
+                            type="telephone"
+                            default=""
+                            label="MOD_PPOSMAP_TELEPHONE"
+                            filter="string"
                         >
                         </field>
                         <field
@@ -108,7 +123,7 @@
                             name="layergroup"
                             type="text"
                             label="MOD_PPOSMAP_LAYER_GROUP_NAME"
-                            showon="groupscontrol:0"
+                            showon="groupscontrol:1"
                         >
                         </field>
                     </form>
@@ -128,18 +143,6 @@
                     layout="joomla.form.field.radio.switcher">
                     <option value="0">JHIDE</option>
                     <option value="1">JSHOW</option>
-                </field>
-                <field
-                    name="positionpointslistmapbox"
-                    type="list"
-                    label="MOD_PPOSMAP_POSITION_LIST_POINTS"
-                    default="0"
-                    showon="pointslistmapbox:1"
-                >
-                    <option value="0">
-                        MOD_PPOSMAP_TABLE_BOTTOM_LIST_POINTS</option>
-                    <option value="1">
-                        MOD_PPOSMAP_COROUSEL_LIST_POINTS_LEFT</option>
                 </field>
             </fieldset>
         </fields>

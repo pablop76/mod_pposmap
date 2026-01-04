@@ -2,7 +2,7 @@ if (!window.Joomla) {
   throw new Error("Joomla API was not properly initialised");
 }
 
-const { 
+const {
   tokenmapbox,
   stylemapbox,
   listofpoints,
@@ -10,75 +10,164 @@ const {
   markermapbox,
   mapboxorleaflet,
   groupscontrol,
-  allFilterLeaflet
- } = Joomla.getOptions("mod_pposmap.vars");
- let originalData = listofpoints;
-document.addEventListener("DOMContentLoaded", function () {
-  // Iteracja po istniejących punktach
-  // Tworzymy tablicę, która będzie zawierać nowe obiekty typu "Feature"
-  let features = [];
-  for (let key in originalData) {
-    let point = originalData[key];
+  allFilterLeaflet,
+} = Joomla.getOptions("mod_pposmap.vars") || {};
 
-    // Tworzenie nowej struktury typu "Feature" dla każdego punktu
-    let feature = {
+function toNumber(value, fallback) {
+  const numberValue = Number(value);
+  return Number.isFinite(numberValue) ? numberValue : fallback;
+}
+
+function asString(value) {
+  return value == null ? "" : String(value);
+}
+
+function buildTelephoneLink(phoneValue) {
+  const raw = asString(phoneValue).trim();
+  if (!raw) return "";
+
+  // Do tel: bierzemy cyfry oraz ewentualny wiodący +
+  const normalized = raw.startsWith("+")
+    ? "+" + raw.slice(1).replace(/\D+/g, "")
+    : raw.replace(/\D+/g, "");
+
+  if (!normalized || normalized === "+") return "";
+
+  return `<a href="tel:${normalized}">${raw}</a>`;
+}
+
+function buildPopupHtml({ title, description, popupimage, openinghours, telephonevalue }) {
+  const imageHtml = buildImageHtml(popupimage);
+  const opening = asString(openinghours).trim();
+  const telLink = buildTelephoneLink(telephonevalue);
+  const telHtml = telLink ? `<p>tel:${telLink}</p>` : "";
+  const openingHtml = opening ? `<p>${opening}</p>` : "";
+
+  return `${imageHtml}<h3 class="mapbox-popup-title">${asString(title)}</h3><p class="mapbox-popup-description">${asString(description)}</p>${openingHtml}${telHtml}`;
+}
+
+function buildLeafletPopupHtml({ title, description, popupimage, openinghours, telephonevalue }) {
+  const imageHtml = buildImageHtml(popupimage);
+  const opening = asString(openinghours).trim();
+  const telLink = buildTelephoneLink(telephonevalue);
+  const telHtml = telLink ? `<p>tel:${telLink}</p>` : "";
+  const openingHtml = opening ? `<p>${opening}</p>` : "";
+
+  return `${imageHtml}<h3>${asString(title)}</h3><p>${asString(description)}</p>${openingHtml}${telHtml}`;
+}
+
+function buildImageHtml(imageObj) {
+  const file = imageObj && imageObj.imagefile ? String(imageObj.imagefile) : "";
+  if (!file) return "";
+  return `<img src="/${file}" />`;
+}
+
+function buildFeatures(originalData) {
+  const features = [];
+
+  if (!originalData) {
+    return features;
+  }
+
+  for (const key in originalData) {
+    const point = originalData[key];
+    if (!point) continue;
+
+    const lng = toNumber(point.longitudemapbox, NaN);
+    const lat = toNumber(point.latitudemapbox, NaN);
+    if (!Number.isFinite(lng) || !Number.isFinite(lat)) continue;
+
+    features.push({
       type: "Feature",
       geometry: {
         type: "Point",
-        coordinates: [parseFloat(point.longitudemapbox), parseFloat(point.latitudemapbox)],
+        coordinates: [lng, lat],
       },
       properties: {
         title: point.geotitle,
         description: point.geodescription,
         popupimage: point.popupimage,
+        openinghours: point.openinghours,
+        telephonevalue: point.telephonevalue,
       },
       groupname: point.layergroup,
-    };
-
-    // Dodawanie nowego obiektu do tablicy features
-    features.push(feature);
+    });
   }
 
-  // Wyświetlenie wyniku
+  return features;
+}
+
+function bindListClick({ features, onSelect }) {
+  const container = document.querySelector(".table-pposmap");
+  if (!container) return;
+
+  container.addEventListener("click", (event) => {
+    const link = event.target && event.target.closest ? event.target.closest("a[data-index]") : null;
+    if (!link || !container.contains(link)) return;
+
+    const index = Number(link.dataset.index);
+    if (!Number.isInteger(index) || !features[index]) return;
+    onSelect(index);
+  });
+}
+
+document.addEventListener("DOMContentLoaded", function () {
+  const features = buildFeatures(listofpoints);
+  if (!features.length) {
+    return;
+  }
+
   const geojson = {
     type: "FeatureCollection",
-    features: features,
+    features,
   };
 
-  if (mapboxorleaflet == "0") {
+  const mode = asString(mapboxorleaflet);
+  const zoom = toNumber(zoommapbox, 7);
+
+  if (mode === "0" || mode === "") {
+    if (!tokenmapbox) {
+      console.warn("mod_pposmap: Brak tokena Mapbox (tokenmapbox)");
+    }
+
+    if (!stylemapbox) {
+      console.warn("mod_pposmap: Brak stylu Mapbox (stylemapbox)");
+    }
+
     mapboxgl.accessToken = tokenmapbox;
 
     //ustawienie m.innymi znacznika pierwszej koordynaty w centrum mapy
     const map = new mapboxgl.Map({
       container: "map",
       style: stylemapbox,
-      zoom: zoommapbox,
+      zoom,
       center: [features[0].geometry.coordinates[0], features[0].geometry.coordinates[1]],
     });
-
     // add markers to map
     for (const feature of geojson.features) {
-      // create a HTML element for each feature
-      const el = document.createElement("div");
-      el.className = "marker";
+      const hasCustomMarker = Boolean(markermapbox && markermapbox.imagefile);
+      const marker = hasCustomMarker
+        ? (() => {
+            const el = document.createElement("div");
+            el.className = "marker";
+            el.setAttribute("role", "img");
+            el.setAttribute("aria-label", asString(feature.properties.title));
+            el.style.backgroundImage = `url(/${markermapbox.imagefile})`;
+            return new mapboxgl.Marker({ element: el, anchor: "bottom" });
+          })()
+        : new mapboxgl.Marker({ anchor: "bottom" });
 
-      const imageshow = function () {
-        // imgpopup.src = feature.properties.popupimage.imagefile;
-        if (feature.properties.popupimage.imagefile) {
-          return `<img src=/${feature.properties.popupimage.imagefile}/>`;
-        } else {
-          return "";
-        }
-      };
-
-      // make a marker for each feature and add to the map
-      new mapboxgl.Marker(el).setLngLat(feature.geometry.coordinates).addTo(map);
-
-      new mapboxgl.Marker(el)
+      marker
         .setLngLat(feature.geometry.coordinates)
         .setPopup(
           new mapboxgl.Popup({ offset: 25 }) // add popups
-            .setHTML(`${imageshow()}<h3 class="mapbox-popup-title">${feature.properties.title}</h3><p class="mapbox-popup-description">${feature.properties.description}</p>`)
+            .setHTML(buildPopupHtml({
+              title: feature.properties.title,
+              description: feature.properties.description,
+              popupimage: feature.properties.popupimage,
+              openinghours: feature.properties.openinghours,
+              telephonevalue: feature.properties.telephonevalue,
+            }))
         )
         .addTo(map);
     }
@@ -132,122 +221,118 @@ document.addEventListener("DOMContentLoaded", function () {
       spinGlobe();
     });
     spinGlobe();
-    //zmiana markera na własny
-    document.querySelectorAll(".marker").forEach((element) => {
-      element.style.backgroundImage = "url(" + "/" + markermapbox.imagefile + ")";
-      if (!markermapbox.alt_empty) element.setAttribute("alt", markermapbox.alt_text);
-    });
     // Set the marker point centrally by clicking on the list outside the map
-    const tableMapbox = document.querySelector(".table-pposmap");
-    console.log(tableMapbox);
-    tableMapbox.addEventListener("click", (e) => {
-      const tableElement = e.target.parentNode;
-      const coordinates = features[tableElement.dataset.index - 1].geometry.coordinates;
-      const title = features[tableElement.dataset.index - 1].properties.title;
-      const description = features[tableElement.dataset.index - 1].properties.description;
-      const popupimage = function () {
-        if (features[tableElement.dataset.index - 1].properties.popupimage.imagefile) {
-          return `<img src=/${features[tableElement.dataset.index - 1].properties.popupimage.imagefile}/>`;
-        } else {
-          return "";
+
+    bindListClick({
+      features,
+      onSelect: (index) => {
+        const coordinates = features[index].geometry.coordinates;
+
+        map.setCenter([coordinates[0], coordinates[1]]);
+
+        for (const popup of document.getElementsByClassName("mapboxgl-popup")) {
+          popup.remove();
         }
-      };
-      map.setCenter([coordinates[0], coordinates[1]]);
-      // remove popup by clicking outside the map
-      for (var popup of document.getElementsByClassName("mapboxgl-popup")) {
-        popup.remove();
-      }
-      // adding a popup by clicking outside the map on the list of points
-      popup = new mapboxgl.Popup().setLngLat(coordinates).setHTML(`${popupimage()}<h3 class="mapbox-popup-title">${title}</h3><p class="mapbox-popup-description">${description}</p>`).addTo(map);
+
+        new mapboxgl.Popup({ offset: 25 })
+          .setLngLat(coordinates)
+          .setHTML(buildPopupHtml({
+            title: features[index].properties.title,
+            description: features[index].properties.description,
+            popupimage: features[index].properties.popupimage,
+            openinghours: features[index].properties.openinghours,
+            telephonevalue: features[index].properties.telephonevalue,
+          }))
+          .addTo(map);
+      },
     });
   } else {
+    const groupsMode = asString(groupscontrol);
 
-    if (groupscontrol == "0") {
-      var markers = [];
-      var customIcon = L.icon({
-        iconUrl: "/" + markermapbox.imagefile,
-        iconSize: [50, 'auto'], // size of the icon
-        iconAnchor: [27, 64], // point of the icon which will correspond to marker's location
-        popupAnchor: [0, 0], // point from which the popup should open relative to the iconAnchor
+    const hasCustomLeafletIcon = Boolean(markermapbox && markermapbox.imagefile);
+    const customIcon = hasCustomLeafletIcon
+      ? L.icon({
+          iconUrl: "/" + markermapbox.imagefile,
+          iconSize: [50, "auto"],
+          iconAnchor: [27, 64],
+          popupAnchor: [0, 0],
+        })
+      : null;
+
+    const markers = features.map((feature) => {
+      const datacontent = buildLeafletPopupHtml({
+        title: feature.properties.title,
+        description: feature.properties.description,
+        popupimage: feature.properties.popupimage,
+        openinghours: feature.properties.openinghours,
+        telephonevalue: feature.properties.telephonevalue,
       });
 
-      for (let i = 0; i < features.length; i++) {
-        let datacontent = `<img src=/${features[i].properties.popupimage.imagefile}><h3>${features[i].properties.title}</h3><p>${features[i].properties.description}</p>`;
-        markers.push(L.marker([features[i].geometry.coordinates[1], features[i].geometry.coordinates[0]], { icon: customIcon }).bindPopup(datacontent));
-      }
+      const markerOptions = customIcon ? { icon: customIcon } : undefined;
+      return L.marker([feature.geometry.coordinates[1], feature.geometry.coordinates[0]], markerOptions).bindPopup(datacontent);
+    });
 
-      var allMarkers = L.layerGroup(markers);
-      var osm = L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
-        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
-      });
+    const allMarkers = L.layerGroup(markers);
+    const osm = L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
+      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+    });
 
-      var map = L.map("map", {
-        center: [features[0].geometry.coordinates[1], features[0].geometry.coordinates[0]],
-        zoom: zoommapbox,
-        layers: [osm, allMarkers],
-        scrollWheelZoom: false,
-      });
-      const tableMapbox = document.querySelector(".table-pposmap");
-      tableMapbox.addEventListener("click", (e) => {
-        const tableElement = e.target.parentNode;
-        const coordinates = features[tableElement.dataset.index - 1].geometry.coordinates;
-        console.log(coordinates);
-        map.setView(new L.LatLng(coordinates[1], coordinates[0]),zoommapbox);
-        L.popup(new L.LatLng(coordinates[1], coordinates[0]), { content: `<img src=/${features[tableElement.dataset.index - 1].properties.popupimage.imagefile}><h3>${features[tableElement.dataset.index - 1].properties.title}</h3><p>${features[tableElement.dataset.index - 1].properties.description}</p>` }).openOn(map);
-      });
-    } else {
-      var markers = [];
-      var customIcon = L.icon({
-        iconUrl: "/" + markermapbox.imagefile,
-        iconSize: [50, 'auto'], // size of the icon
-        iconAnchor: [27, 64], // point of the icon which will correspond to marker's location
-        popupAnchor: [0, 0], // point from which the popup should open relative to the iconAnchor
-      });
+    const map = L.map("map", {
+      center: [features[0].geometry.coordinates[1], features[0].geometry.coordinates[0]],
+      zoom,
+      layers: [osm, allMarkers],
+      scrollWheelZoom: false,
+    });
 
-      for (let i = 0; i < features.length; i++) {
-        let datacontent = `<img src=/${features[i].properties.popupimage.imagefile}><h3>${features[i].properties.title}</h3><p>${features[i].properties.description}</p>`;
-        markers.push(L.marker([features[i].geometry.coordinates[1], features[i].geometry.coordinates[0]], { icon: customIcon }).bindPopup(datacontent));
-      }
+    bindListClick({
+      features,
+      onSelect: (index) => {
+        const coordinates = features[index].geometry.coordinates;
+        const content = buildLeafletPopupHtml({
+          title: features[index].properties.title,
+          description: features[index].properties.description,
+          popupimage: features[index].properties.popupimage,
+          openinghours: features[index].properties.openinghours,
+          telephonevalue: features[index].properties.telephonevalue,
+        });
 
-      var allMarkers = L.layerGroup(markers);
-      var osm = L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
-        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
-      });
+        map.setView(new L.LatLng(coordinates[1], coordinates[0]), zoom);
 
-      var map = L.map("map", {
-        center: [features[0].geometry.coordinates[1], features[0].geometry.coordinates[0]],
-        zoom: zoommapbox,
-        layers: [osm, allMarkers],
-        scrollWheelZoom: false,
-      });
-      // Set the marker point centrally by clicking on the list outside the map
-      const tableMapbox = document.querySelector(".table-pposmap");
-      tableMapbox.addEventListener("click", (e) => {
-        const tableElement = e.target.parentNode;
-        const coordinates = features[tableElement.dataset.index - 1].geometry.coordinates;
-        console.log(coordinates);
-        map.setView(new L.LatLng(coordinates[1], coordinates[0]),zoommapbox);
-        L.popup(new L.LatLng(coordinates[1], coordinates[0]), { content: `<img src=/${features[tableElement.dataset.index - 1].properties.popupimage.imagefile}><h3>${features[tableElement.dataset.index - 1].properties.title}</h3><p>${features[tableElement.dataset.index - 1].properties.description}</p>` }).openOn(map);
-      });
+        L.popup(new L.LatLng(coordinates[1], coordinates[0]), {
+          content,
+        }).openOn(map);
 
-      const result = features.reduce((acc, item) => {
-        const group = item.groupname;
-        const datacontent = `<img src=/${item.properties.popupimage.imagefile}><h3>${item.properties.title}</h3><p>${item.properties.description}</p>`;
-        const value = L.marker([item.geometry.coordinates[1], item.geometry.coordinates[0]], { icon: customIcon }).bindPopup(datacontent);
+        map.panTo(new L.LatLng(coordinates[1], coordinates[0]));
+      },
+    });
+
+    if (groupsMode !== "0") {
+      const grouped = features.reduce((acc, item) => {
+        const group = asString(item.groupname).trim();
+        if (!group) {
+          return acc;
+        }
+        const datacontent = buildLeafletPopupHtml({
+          title: item.properties.title,
+          description: item.properties.description,
+          popupimage: item.properties.popupimage,
+          openinghours: item.properties.openinghours,
+          telephonevalue: item.properties.telephonevalue,
+        });
+        const markerOptions = customIcon ? { icon: customIcon } : undefined;
+        const value = L.marker([item.geometry.coordinates[1], item.geometry.coordinates[0]], markerOptions).bindPopup(datacontent);
+
         if (!acc[group]) {
           acc[group] = [];
         }
         acc[group].push(value);
         return acc;
       }, {});
-      function layerGroup(value) {
-        return L.layerGroup(value);
-      }
-      const createLayerGroup = Object.fromEntries(Object.entries(result).map(([key, value]) => [key, layerGroup(value)]));
 
-      createLayerGroup[allFilterLeaflet] = allMarkers;
-      const newObjLayerGroup = { [allFilterLeaflet]: allMarkers, ...createLayerGroup };
-      L.control.layers(null, newObjLayerGroup).addTo(map);
+      const createLayerGroup = Object.fromEntries(Object.entries(grouped).map(([key, value]) => [key, L.layerGroup(value)]));
+      const allLabel = asString(allFilterLeaflet) || "All";
+      const overlays = { [allLabel]: allMarkers, ...createLayerGroup };
+      L.control.layers(null, overlays).addTo(map);
     }
   }
 });
