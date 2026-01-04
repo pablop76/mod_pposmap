@@ -9,12 +9,12 @@
 }
 
 .table-pposmap {
-  height: var(--pposmap-height, 100%);
   min-height: var(--pposmap-height, 500px);
 }
 
 #map {
-  height: 100%;
+  height: var(--pposmap-height, 100%);
+  min-height: var(--pposmap-height, 500px);
   width: 100%;
 }
 
@@ -67,7 +67,7 @@
 }
 
 .list-items-container {
-  max-height: 100%;
+  max-height: var(--pposmap-height, 500px);
   width: 22%;
   overflow: auto;
   scrollbar-color: rgba(0, 0, 0, 0.1) white;
@@ -107,8 +107,12 @@ h3.location {
   .table-pposmap {
     min-height: var(--pposmap-height, 400px);
   }
+  #map {
+    min-height: var(--pposmap-height, 400px);
+  }
   .list-items-container {
     width: 100%;
+    max-height: var(--pposmap-height, 400px);
     overflow: auto;
     scrollbar-color: rgba(0, 0, 0, 0.1) white;
     scrollbar-width: thin;
