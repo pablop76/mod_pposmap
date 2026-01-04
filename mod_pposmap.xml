@@ -47,21 +47,6 @@
                 >
                 </field>
                 <field
-                    name="zoommapbox"
-                    type="integer"
-                    label="MOD_PPOSMAP_ZOOM"
-                    first="0" last="15" step="1"
-                    default="7"
-                >
-                </field>
-                <field
-                    name="mapheight"
-                    type="text"
-                    default=""
-                    label="MOD_PPOSMAP_MAP_HEIGHT"
-                    description="MOD_PPOSMAP_MAP_HEIGHT_DESC"
-                />
-                <field
                     name="groupscontrol"
                     showon="mapboxorleaflet:1"
                     type="radio"
@@ -135,6 +120,23 @@
                         </field>
                     </form>
                 </field>
+            </fieldset>
+            <fieldset name="display" label="MOD_PPOSMAP_FIELDSET_DISPLAY">
+                <field
+                    name="zoommapbox"
+                    type="integer"
+                    label="MOD_PPOSMAP_ZOOM"
+                    first="0" last="15" step="1"
+                    default="7"
+                >
+                </field>
+                <field
+                    name="mapheight"
+                    type="text"
+                    default=""
+                    label="MOD_PPOSMAP_MAP_HEIGHT"
+                    description="MOD_PPOSMAP_MAP_HEIGHT_DESC"
+                />
                 <field
                     name="markermapbox"
                     type="accessiblemedia"
