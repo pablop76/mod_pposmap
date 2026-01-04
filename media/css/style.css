@@ -9,8 +9,8 @@
 }
 
 .table-pposmap {
-  --pposmap-height: 900px;
-  height: var(--pposmap-height);
+  height: var(--pposmap-height, 100%);
+  min-height: var(--pposmap-height, 500px);
 }
 
 #map {
@@ -105,7 +105,7 @@ h3.location {
     flex-direction: column;
   }
   .table-pposmap {
-    --pposmap-height: 500px;
+    min-height: var(--pposmap-height, 400px);
   }
   .list-items-container {
     width: 100%;
