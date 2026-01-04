@@ -10,10 +10,11 @@
 
 .table-pposmap {
   --pposmap-height: 900px;
+  height: var(--pposmap-height);
 }
 
 #map {
-  height: var(--pposmap-height);
+  height: 100%;
   width: 100%;
 }
 
@@ -66,7 +67,7 @@
 }
 
 .list-items-container {
-  max-height: var(--pposmap-height);
+  max-height: 100%;
   width: 22%;
   overflow: auto;
   scrollbar-color: rgba(0, 0, 0, 0.1) white;
