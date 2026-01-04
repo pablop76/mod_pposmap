@@ -138,6 +138,13 @@
                     description="MOD_PPOSMAP_MAP_HEIGHT_DESC"
                 />
                 <field
+                    name="mapheight_mobile"
+                    type="text"
+                    default=""
+                    label="MOD_PPOSMAP_MAP_HEIGHT_MOBILE"
+                    description="MOD_PPOSMAP_MAP_HEIGHT_MOBILE_DESC"
+                />
+                <field
                     name="markermapbox"
                     type="accessiblemedia"
                     label="MOD_PPOSMAP_MARKER"

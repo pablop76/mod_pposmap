@@ -105,14 +105,15 @@ h3.location {
     flex-direction: column;
   }
   .table-pposmap {
-    min-height: var(--pposmap-height, 400px);
+    min-height: var(--pposmap-height-mobile, var(--pposmap-height, 400px));
   }
   #map {
-    min-height: var(--pposmap-height, 400px);
+    height: var(--pposmap-height-mobile, var(--pposmap-height, 100%));
+    min-height: var(--pposmap-height-mobile, var(--pposmap-height, 400px));
   }
   .list-items-container {
     width: 100%;
-    max-height: var(--pposmap-height, 400px);
+    max-height: var(--pposmap-height-mobile, var(--pposmap-height, 400px));
     overflow: auto;
     scrollbar-color: rgba(0, 0, 0, 0.1) white;
     scrollbar-width: thin;

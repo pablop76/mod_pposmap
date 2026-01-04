@@ -24,11 +24,26 @@
     $mapboxorleaflet          = $params->get('mapboxorleaflet', '');
     $groupscontrol            = $params->get('groupscontrol', '');
     $mapHeightRaw             = trim((string) $params->get('mapheight', ''));
+    $mapHeightMobileRaw       = trim((string) $params->get('mapheight_mobile', ''));
 
     $mapHeightCss = '';
     if ($mapHeightRaw !== '') {
         $mapHeightCss = preg_match('/^\d+$/', $mapHeightRaw) ? ($mapHeightRaw . 'px') : $mapHeightRaw;
     }
+
+    $mapHeightMobileCss = '';
+    if ($mapHeightMobileRaw !== '') {
+        $mapHeightMobileCss = preg_match('/^\d+$/', $mapHeightMobileRaw) ? ($mapHeightMobileRaw . 'px') : $mapHeightMobileRaw;
+    }
+
+    $wrapperStyleParts = [];
+    if ($mapHeightCss !== '') {
+        $wrapperStyleParts[] = '--pposmap-height: ' . htmlspecialchars($mapHeightCss, ENT_QUOTES, 'UTF-8') . ';';
+    }
+    if ($mapHeightMobileCss !== '') {
+        $wrapperStyleParts[] = '--pposmap-height-mobile: ' . htmlspecialchars($mapHeightMobileCss, ENT_QUOTES, 'UTF-8') . ';';
+    }
+    $wrapperStyleAttr = $wrapperStyleParts ? (' style="' . implode(' ', $wrapperStyleParts) . '"') : '';
 
     $isMapbox = ((string) $mapboxorleaflet) === '0' || $mapboxorleaflet === '';
 
@@ -58,7 +73,7 @@
 
 ?>
 <!-- Start slideshow -->
-<div class="flex-container table-pposmap"<?php echo $mapHeightCss !== '' ? ' style="--pposmap-height: ' . htmlspecialchars($mapHeightCss, ENT_QUOTES, 'UTF-8') . ';"' : ''; ?>>
+<div class="flex-container table-pposmap"<?php echo $wrapperStyleAttr; ?>>
     <?php if ($pointslistmapbox) {?>
     <div class="list-items-container uk-visible@m">
         <?php
