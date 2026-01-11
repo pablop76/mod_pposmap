@@ -13,6 +13,22 @@ const {
   allFilterLeaflet,
 } = Joomla.getOptions("mod_pposmap.vars") || {};
 
+function getLeaflet() {
+  if (window.PPOSMAP_LEAFLET) {
+    return window.PPOSMAP_LEAFLET;
+  }
+
+  const globalL = window.L;
+  if (globalL && typeof globalL.noConflict === "function") {
+    const localL = globalL.noConflict();
+    window.PPOSMAP_LEAFLET = localL;
+    return localL;
+  }
+
+  window.PPOSMAP_LEAFLET = globalL;
+  return globalL;
+}
+
 function toNumber(value, fallback) {
   const numberValue = Number(value);
   return Number.isFinite(numberValue) ? numberValue : fallback;
@@ -247,6 +263,12 @@ document.addEventListener("DOMContentLoaded", function () {
       },
     });
   } else {
+    const L = getLeaflet();
+    if (!L) {
+      console.error("mod_pposmap: Leaflet nie jest dostępny (window.L)");
+      return;
+    }
+
     const groupsMode = asString(groupscontrol);
 
     const hasCustomLeafletIcon = Boolean(markermapbox && markermapbox.imagefile);
