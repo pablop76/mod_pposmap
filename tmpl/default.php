@@ -11,7 +11,6 @@
     defined('_JEXEC') or die;
     use Joomla\CMS\Language\Text;
     use Joomla\CMS\Uri\Uri;
-    use Joomla\CMS\Extension\ExtensionHelper;
 
     $document = $this->app->getDocument();
     $wa       = $document->getWebAssetManager();
@@ -31,19 +30,6 @@
     $groupscontrol            = $params->get('groupscontrol', '');
     $mapHeightRaw             = trim((string) $params->get('mapheight', ''));
     $mapHeightMobileRaw       = trim((string) $params->get('mapheight_mobile', ''));
-
-    $moduleVersion = '';
-    try {
-        $extensionRecord = ExtensionHelper::getExtensionRecord('mod_pposmap', 'module', 0);
-        if ($extensionRecord && !empty($extensionRecord->manifest_cache)) {
-            $manifestCache = json_decode($extensionRecord->manifest_cache);
-            if (!empty($manifestCache->version)) {
-                $moduleVersion = (string) $manifestCache->version;
-            }
-        }
-    } catch (\Throwable $e) {
-        // Stopka z wersją jest kosmetyczna - nigdy nie powinna wywrócić renderowania modułu.
-    }
 
     $pointsForSchema = (array) $listofpoints;
     $schemaItems = [];
@@ -168,5 +154,4 @@
         ?>
     <div class="pposmap-map"></div>
 </div>
-<div class="pposmap-credit"><?php echo Text::sprintf('MOD_PPOSMAP_CREDIT', $moduleVersion !== '' ? 'v' . $moduleVersion : ''); ?></div>
 <!-- End slideshow -->
