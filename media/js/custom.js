@@ -107,28 +107,16 @@ function bindListClick(container, { features, onSelect }) {
   });
 }
 
-function initMapboxInstance(container, mapEl, options, features) {
-  const { tokenmapbox, stylemapbox, zoommapbox, markermapbox, siteRoot } = options;
-  const zoom = toNumber(zoommapbox, 7);
-
-  if (!tokenmapbox) {
-    console.warn("mod_pposmap: Brak tokena Mapbox (tokenmapbox)");
+function parseMaybeJson(value) {
+  if (typeof value !== "string") return value;
+  try {
+    return JSON.parse(value);
+  } catch (e) {
+    return value;
   }
-  if (!stylemapbox) {
-    console.warn("mod_pposmap: Brak stylu Mapbox (stylemapbox)");
-  }
+}
 
-  mapboxgl.accessToken = tokenmapbox;
-
-  //ustawienie m.innymi znacznika pierwszej koordynaty w centrum mapy
-  const map = new mapboxgl.Map({
-    container: mapEl,
-    style: stylemapbox,
-    zoom,
-    center: [features[0].geometry.coordinates[0], features[0].geometry.coordinates[1]],
-  });
-
-  // add markers to map
+function addMapboxMarkers(map, features, markermapbox, siteRoot) {
   for (const feature of features) {
     const hasCustomMarker = Boolean(markermapbox && markermapbox.imagefile);
     const marker = hasCustomMarker
@@ -149,6 +137,145 @@ function initMapboxInstance(container, mapEl, options, features) {
           .setHTML(buildPopupHtml(feature.properties, "mapbox", siteRoot))
       )
       .addTo(map);
+  }
+}
+
+function addMapboxClusters(map, mapEl, features, markermapbox, siteRoot) {
+  const sourceId = "pposmap-points";
+  const clusterLayerId = "pposmap-clusters";
+  const clusterCountLayerId = "pposmap-cluster-count";
+  const pointLayerId = "pposmap-unclustered";
+  const iconName = "pposmap-marker-icon";
+  const hasCustomIcon = Boolean(markermapbox && markermapbox.imagefile);
+
+  const setupLayers = () => {
+    map.addSource(sourceId, {
+      type: "geojson",
+      data: { type: "FeatureCollection", features },
+      cluster: true,
+      clusterMaxZoom: 14,
+      clusterRadius: 50,
+    });
+
+    map.addLayer({
+      id: clusterLayerId,
+      type: "circle",
+      source: sourceId,
+      filter: ["has", "point_count"],
+      paint: {
+        "circle-color": ["step", ["get", "point_count"], "#51bbd6", 10, "#f1f075", 30, "#f28cb1"],
+        "circle-radius": ["step", ["get", "point_count"], 18, 10, 24, 30, 32],
+      },
+    });
+
+    map.addLayer({
+      id: clusterCountLayerId,
+      type: "symbol",
+      source: sourceId,
+      filter: ["has", "point_count"],
+      layout: {
+        "text-field": ["get", "point_count_abbreviated"],
+        "text-font": ["DIN Offc Pro Medium", "Arial Unicode MS Bold"],
+        "text-size": 14,
+      },
+    });
+
+    map.addLayer(
+      hasCustomIcon
+        ? {
+            id: pointLayerId,
+            type: "symbol",
+            source: sourceId,
+            filter: ["!", ["has", "point_count"]],
+            layout: {
+              "icon-image": iconName,
+              "icon-size": 1,
+              "icon-anchor": "bottom",
+              "icon-allow-overlap": true,
+            },
+          }
+        : {
+            id: pointLayerId,
+            type: "circle",
+            source: sourceId,
+            filter: ["!", ["has", "point_count"]],
+            paint: {
+              "circle-color": "#11b4da",
+              "circle-radius": 8,
+              "circle-stroke-width": 2,
+              "circle-stroke-color": "#fff",
+            },
+          }
+    );
+
+    map.on("click", clusterLayerId, (event) => {
+      const clusterFeatures = map.queryRenderedFeatures(event.point, { layers: [clusterLayerId] });
+      const clusterId = clusterFeatures[0].properties.cluster_id;
+      map.getSource(sourceId).getClusterExpansionZoom(clusterId, (error, targetZoom) => {
+        if (error) return;
+        map.easeTo({ center: clusterFeatures[0].geometry.coordinates, zoom: targetZoom });
+      });
+    });
+
+    map.on("click", pointLayerId, (event) => {
+      const feature = event.features[0];
+      const coordinates = feature.geometry.coordinates.slice();
+      const properties = { ...feature.properties, popupimage: parseMaybeJson(feature.properties.popupimage) };
+
+      new mapboxgl.Popup({ offset: 25 })
+        .setLngLat(coordinates)
+        .setHTML(buildPopupHtml(properties, "mapbox", siteRoot))
+        .addTo(map);
+    });
+
+    for (const layerId of [clusterLayerId, pointLayerId]) {
+      map.on("mouseenter", layerId, () => {
+        mapEl.style.cursor = "pointer";
+      });
+      map.on("mouseleave", layerId, () => {
+        mapEl.style.cursor = "";
+      });
+    }
+  };
+
+  if (hasCustomIcon) {
+    map.loadImage(`${siteRoot || ""}/${markermapbox.imagefile}`, (error, image) => {
+      if (!error && image && !map.hasImage(iconName)) {
+        map.addImage(iconName, image);
+      }
+      setupLayers();
+    });
+  } else {
+    setupLayers();
+  }
+}
+
+function initMapboxInstance(container, mapEl, options, features) {
+  const { tokenmapbox, stylemapbox, zoommapbox, markermapbox, siteRoot, clustermarkers } = options;
+  const zoom = toNumber(zoommapbox, 7);
+  const clusteringEnabled = asString(clustermarkers) === "1";
+
+  if (!tokenmapbox) {
+    console.warn("mod_pposmap: Brak tokena Mapbox (tokenmapbox)");
+  }
+  if (!stylemapbox) {
+    console.warn("mod_pposmap: Brak stylu Mapbox (stylemapbox)");
+  }
+
+  mapboxgl.accessToken = tokenmapbox;
+
+  //ustawienie m.innymi znacznika pierwszej koordynaty w centrum mapy
+  const map = new mapboxgl.Map({
+    container: mapEl,
+    style: stylemapbox,
+    zoom,
+    center: [features[0].geometry.coordinates[0], features[0].geometry.coordinates[1]],
+  });
+
+  if (clusteringEnabled) {
+    map.on("load", () => addMapboxClusters(map, mapEl, features, markermapbox, siteRoot));
+  } else {
+    addMapboxMarkers(map, features, markermapbox, siteRoot);
   }
 
   map.addControl(new mapboxgl.NavigationControl());
@@ -178,9 +305,19 @@ function initMapboxInstance(container, mapEl, options, features) {
   });
 }
 
+function createMarkerLayer(L, markerList, clusteringEnabled) {
+  if (clusteringEnabled && typeof L.markerClusterGroup === "function") {
+    const group = L.markerClusterGroup();
+    group.addLayers(markerList);
+    return group;
+  }
+  return L.layerGroup(markerList);
+}
+
 function initLeafletInstance(container, mapEl, options, features) {
-  const { zoommapbox, markermapbox, groupscontrol, allFilterLeaflet, siteRoot } = options;
+  const { zoommapbox, markermapbox, groupscontrol, allFilterLeaflet, siteRoot, clustermarkers } = options;
   const zoom = toNumber(zoommapbox, 7);
+  const clusteringEnabled = asString(clustermarkers) === "1";
 
   const L = getLeaflet();
   if (!L) {
@@ -206,7 +343,7 @@ function initLeafletInstance(container, mapEl, options, features) {
     return L.marker([feature.geometry.coordinates[1], feature.geometry.coordinates[0]], markerOptions).bindPopup(datacontent);
   });
 
-  const allMarkers = L.layerGroup(markers);
+  const allMarkers = createMarkerLayer(L, markers, clusteringEnabled);
   const osm = L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
     attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
   });
@@ -251,7 +388,7 @@ function initLeafletInstance(container, mapEl, options, features) {
       return acc;
     }, {});
 
-    const createLayerGroup = Object.fromEntries(Object.entries(grouped).map(([key, value]) => [key, L.layerGroup(value)]));
+    const createLayerGroup = Object.fromEntries(Object.entries(grouped).map(([key, value]) => [key, createMarkerLayer(L, value, clusteringEnabled)]));
     const allLabel = asString(allFilterLeaflet) || "All";
     const overlays = { [allLabel]: allMarkers, ...createLayerGroup };
     L.control.layers(null, overlays).addTo(map);

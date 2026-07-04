@@ -28,6 +28,15 @@
       "version": "1.0.0"
     },
     {
+      "name": "leafletmarkercluster",
+      "type": "script",
+      "uri": "https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js",
+      "dependencies": [
+        "leafletjs"
+      ],
+      "version": "1.5.3"
+    },
+    {
       "name": "mapboxgljs",
       "type": "script",
       "uri": "https://api.mapbox.com/mapbox-gl-js/v3.25.0/mapbox-gl.js",
@@ -57,6 +66,18 @@
       "type": "style",
       "uri": "https://api.mapbox.com/mapbox-gl-js/v3.25.0/mapbox-gl.css",
       "version": "3.25.0"
+    },
+    {
+      "name": "leafletmarkerclustercss",
+      "type": "style",
+      "uri": "https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css",
+      "version": "1.5.3"
+    },
+    {
+      "name": "leafletmarkerclusterdefaultcss",
+      "type": "style",
+      "uri": "https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css",
+      "version": "1.5.3"
     }
   ]
 }

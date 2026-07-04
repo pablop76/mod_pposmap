@@ -25,6 +25,7 @@
     $markermapbox             = $params->get('markermapbox', '');
     $pointslistmapbox         = $params->get('pointslistmapbox', '');
     $addSchema                = (int) $params->get('addschema', 1);
+    $clustermarkers           = $params->get('clustermarkers', '0');
     $mapboxorleaflet          = $params->get('mapboxorleaflet', '');
     $groupscontrol            = $params->get('groupscontrol', '');
     $mapHeightRaw             = trim((string) $params->get('mapheight', ''));
@@ -82,6 +83,12 @@
     } else {
         $wa->useScript('leafletjs');
         $wa->useStyle('leafletcss');
+
+        if ((string) $clustermarkers === '1') {
+            $wa->useScript('leafletmarkercluster');
+            $wa->useStyle('leafletmarkerclustercss');
+            $wa->useStyle('leafletmarkerclusterdefaultcss');
+        }
     }
 
     // Nasze style na końcu, żeby mogły nadpisywać vendor CSS.
@@ -95,6 +102,7 @@
         'markermapbox'    => $markermapbox,
         'groupscontrol'   => $groupscontrol,
         'mapboxorleaflet' => $mapboxorleaflet,
+        'clustermarkers'  => $clustermarkers,
         'allFilterLeaflet' => Text::_('MOD_PPOSMAP_GROUP_LEAFLET_ALL'),
         'siteRoot'        => rtrim(Uri::root(), '/'),
     ]);
