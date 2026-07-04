@@ -3,19 +3,10 @@ if (!window.Joomla) {
 }
 
 function getLeaflet() {
-  if (window.PPOSMAP_LEAFLET) {
-    return window.PPOSMAP_LEAFLET;
-  }
-
-  const globalL = window.L;
-  if (globalL && typeof globalL.noConflict === "function") {
-    const localL = globalL.noConflict();
-    window.PPOSMAP_LEAFLET = localL;
-    return localL;
-  }
-
-  window.PPOSMAP_LEAFLET = globalL;
-  return globalL;
+  // Uwaga: celowo NIE wywołujemy L.noConflict() — wtyczka leaflet.markercluster
+  // wewnętrznie odwołuje się do globalnego window.L (np. w iconCreateFunction),
+  // więc po noConflict() rzuca "Cannot read properties of undefined (reading 'MarkerClusterGroup')".
+  return window.L;
 }
 
 function toNumber(value, fallback) {
