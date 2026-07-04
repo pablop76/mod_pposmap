@@ -16,16 +16,44 @@
     $wa       = $document->getWebAssetManager();
     $wa->getRegistry()->addExtensionRegistryFile('mod_pposmap');
 
+    $moduleId                 = (int) $this->module->id;
+
     $tokenmapbox              = $params->get('tokenmapbox', '');
     $stylemapbox              = $params->get('stylemapbox', 'mapbox://styles/mapbox/streets-v12');
     $listofpoints             = $params->get('listofpoints', '');
     $zoommapbox               = $params->get('zoommapbox', '1');
     $markermapbox             = $params->get('markermapbox', '');
     $pointslistmapbox         = $params->get('pointslistmapbox', '');
+    $addSchema                = (int) $params->get('addschema', 1);
     $mapboxorleaflet          = $params->get('mapboxorleaflet', '');
     $groupscontrol            = $params->get('groupscontrol', '');
     $mapHeightRaw             = trim((string) $params->get('mapheight', ''));
     $mapHeightMobileRaw       = trim((string) $params->get('mapheight_mobile', ''));
+
+    $pointsForSchema = (array) $listofpoints;
+    $schemaItems = [];
+    foreach ($pointsForSchema as $point) {
+        if (!isset($point->latitudemapbox, $point->longitudemapbox) || $point->latitudemapbox === '' || $point->longitudemapbox === '') {
+            continue;
+        }
+        $item = [
+            '@type'    => 'Place',
+            'position' => count($schemaItems) + 1,
+            'name'     => (string) ($point->geotitle ?? ''),
+            'geo'      => [
+                '@type'     => 'GeoCoordinates',
+                'latitude'  => (float) $point->latitudemapbox,
+                'longitude' => (float) $point->longitudemapbox,
+            ],
+        ];
+        if (!empty($point->geodescription)) {
+            $item['description'] = (string) $point->geodescription;
+        }
+        if (!empty($point->telephonevalue)) {
+            $item['telephone'] = (string) $point->telephonevalue;
+        }
+        $schemaItems[] = $item;
+    }
 
     $mapHeightCss = '';
     if ($mapHeightRaw !== '') {
@@ -59,7 +87,7 @@
     // Nasze style na końcu, żeby mogły nadpisywać vendor CSS.
     $wa->useStyle('mod_pposmap.style');
 
-    $document->addScriptOptions('mod_pposmap.vars', [
+    $document->addScriptOptions('mod_pposmap.vars.' . $moduleId, [
         'tokenmapbox'     => $tokenmapbox,
         'stylemapbox'     => $stylemapbox,
         'listofpoints'    => $listofpoints,
@@ -75,7 +103,14 @@
 
 ?>
 <!-- Start slideshow -->
-<div class="flex-container table-pposmap"<?php echo $wrapperStyleAttr; ?>>
+<?php if ($addSchema && $schemaItems) : ?>
+<script type="application/ld+json"><?php echo json_encode([
+    '@context'       => 'https://schema.org',
+    '@type'          => 'ItemList',
+    'itemListElement' => $schemaItems,
+], JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT); ?></script>
+<?php endif; ?>
+<div class="flex-container table-pposmap" data-pposmap-id="<?php echo $moduleId; ?>"<?php echo $wrapperStyleAttr; ?>>
     <?php if ($pointslistmapbox) {?>
     <div class="list-items-container uk-visible@m">
         <?php
@@ -100,7 +135,7 @@
             </div>
             <div class="uk-flex uk-flex-between uk-flex-middle">
                 <p class="mapbox-popup-description"><?php echo $limitString($point->geodescription, 9); ?></p>
-                <a data-index='<?php echo $i; ?>' class="uk-button uk-button-default button-1">ZOBACZ</a>
+                <button type="button" data-index='<?php echo $i; ?>' class="uk-button uk-button-default button-1"><?php echo Text::_('MOD_PPOSMAP_VIEW_BUTTON'); ?></button>
             </div>
         </div>
         <?php
@@ -109,6 +144,6 @@
     <?php
         }
         ?>
-    <div id="map"></div>
+    <div class="pposmap-map"></div>
 </div>
 <!-- End slideshow -->

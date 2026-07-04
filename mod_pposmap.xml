@@ -69,12 +69,18 @@
                             name="longitudemapbox"
                             type="number"
                             label="MOD_PPOSMAP_LONGITUDE"
+                            first="-180"
+                            last="180"
+                            step="0.000001"
                         >
                         </field>
                         <field
                             name="latitudemapbox"
                             type="number"
                             label="MOD_PPOSMAP_LATITUDE"
+                            first="-90"
+                            last="90"
+                            step="0.000001"
                         >
                         </field>
                         <field
@@ -156,6 +162,16 @@
                     default="0"
                     label="MOD_PPOSMAP_SHOW_LIST_POINTS"
                     description="MOD_PPOSMAP_SHOW_LIST_POINTS_DESC"
+                    layout="joomla.form.field.radio.switcher">
+                    <option value="0">JHIDE</option>
+                    <option value="1">JSHOW</option>
+                </field>
+                <field
+                    name="addschema"
+                    type="radio"
+                    default="1"
+                    label="MOD_PPOSMAP_ADD_SCHEMA"
+                    description="MOD_PPOSMAP_ADD_SCHEMA_DESC"
                     layout="joomla.form.field.radio.switcher">
                     <option value="0">JHIDE</option>
                     <option value="1">JSHOW</option>
