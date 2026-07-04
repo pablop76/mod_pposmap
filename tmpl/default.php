@@ -33,12 +33,16 @@
     $mapHeightMobileRaw       = trim((string) $params->get('mapheight_mobile', ''));
 
     $moduleVersion = '';
-    $extensionRecord = ExtensionHelper::getExtensionRecord('mod_pposmap', 'module');
-    if ($extensionRecord && !empty($extensionRecord->manifest_cache)) {
-        $manifestCache = json_decode($extensionRecord->manifest_cache);
-        if (!empty($manifestCache->version)) {
-            $moduleVersion = (string) $manifestCache->version;
+    try {
+        $extensionRecord = ExtensionHelper::getExtensionRecord('mod_pposmap', 'module', 0);
+        if ($extensionRecord && !empty($extensionRecord->manifest_cache)) {
+            $manifestCache = json_decode($extensionRecord->manifest_cache);
+            if (!empty($manifestCache->version)) {
+                $moduleVersion = (string) $manifestCache->version;
+            }
         }
+    } catch (\Throwable $e) {
+        // Stopka z wersją jest kosmetyczna - nigdy nie powinna wywrócić renderowania modułu.
     }
 
     $pointsForSchema = (array) $listofpoints;
