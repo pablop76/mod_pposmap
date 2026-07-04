@@ -10,6 +10,7 @@
 
     defined('_JEXEC') or die;
     use Joomla\CMS\Language\Text;
+    use Joomla\CMS\Uri\Uri;
 
     $document = $this->app->getDocument();
     $wa       = $document->getWebAssetManager();
@@ -48,8 +49,8 @@
     $isMapbox = ((string) $mapboxorleaflet) === '0' || $mapboxorleaflet === '';
 
     if ($isMapbox) {
-        $wa->useScript('mapbox');
-        $wa->useStyle('stylemapbox');
+        $wa->useScript('mapboxgljs');
+        $wa->useStyle('mapboxglcss');
     } else {
         $wa->useScript('leafletjs');
         $wa->useStyle('leafletcss');
@@ -67,6 +68,7 @@
         'groupscontrol'   => $groupscontrol,
         'mapboxorleaflet' => $mapboxorleaflet,
         'allFilterLeaflet' => Text::_('MOD_PPOSMAP_GROUP_LEAFLET_ALL'),
+        'siteRoot'        => rtrim(Uri::root(), '/'),
     ]);
 
     $wa->useScript('mod_pposmap.custom');
@@ -89,7 +91,8 @@
                 return implode(' ', $string);
             };
 
-                for ($i = 0; $i <= count((array) $listofpoints) - 1; $i++) {
+                $pointsCount = count((array) $listofpoints);
+                for ($i = 0; $i < $pointsCount; $i++) {
                 $point = $points->{"listofpoints" . $i}; ?>
         <div class="list-item">
             <div>

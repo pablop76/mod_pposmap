@@ -11,7 +11,12 @@ const {
   mapboxorleaflet,
   groupscontrol,
   allFilterLeaflet,
+  siteRoot,
 } = Joomla.getOptions("mod_pposmap.vars") || {};
+
+function assetUrl(path) {
+  return `${siteRoot || ""}/${path}`;
+}
 
 function getLeaflet() {
   if (window.PPOSMAP_LEAFLET) {
@@ -52,30 +57,22 @@ function buildTelephoneLink(phoneValue) {
   return `<a href="tel:${normalized}">${raw}</a>`;
 }
 
-function buildPopupHtml({ title, description, popupimage, openinghours, telephonevalue }) {
-  const imageHtml = buildImageHtml(popupimage);
+function buildPopupHtml({ title, description, popupimage, openinghours, telephonevalue }, variant = "leaflet") {
+  const imageHtml = buildImageHtml(popupimage, title);
   const opening = asString(openinghours).trim();
   const telLink = buildTelephoneLink(telephonevalue);
   const telHtml = telLink ? `<p>tel:${telLink}</p>` : "";
   const openingHtml = opening ? `<p>${opening}</p>` : "";
+  const titleClass = variant === "mapbox" ? ' class="mapbox-popup-title"' : "";
+  const descriptionClass = variant === "mapbox" ? ' class="mapbox-popup-description"' : "";
 
-  return `${imageHtml}<h3 class="mapbox-popup-title">${asString(title)}</h3><p class="mapbox-popup-description">${asString(description)}</p>${openingHtml}${telHtml}`;
+  return `${imageHtml}<h3${titleClass}>${asString(title)}</h3><p${descriptionClass}>${asString(description)}</p>${openingHtml}${telHtml}`;
 }
 
-function buildLeafletPopupHtml({ title, description, popupimage, openinghours, telephonevalue }) {
-  const imageHtml = buildImageHtml(popupimage);
-  const opening = asString(openinghours).trim();
-  const telLink = buildTelephoneLink(telephonevalue);
-  const telHtml = telLink ? `<p>tel:${telLink}</p>` : "";
-  const openingHtml = opening ? `<p>${opening}</p>` : "";
-
-  return `${imageHtml}<h3>${asString(title)}</h3><p>${asString(description)}</p>${openingHtml}${telHtml}`;
-}
-
-function buildImageHtml(imageObj) {
+function buildImageHtml(imageObj, title) {
   const file = imageObj && imageObj.imagefile ? String(imageObj.imagefile) : "";
   if (!file) return "";
-  return `<img src="/${file}" />`;
+  return `<img src="${assetUrl(file)}" alt="${asString(title)}" />`;
 }
 
 function buildFeatures(originalData) {
@@ -168,7 +165,7 @@ document.addEventListener("DOMContentLoaded", function () {
             el.className = "marker";
             el.setAttribute("role", "img");
             el.setAttribute("aria-label", asString(feature.properties.title));
-            el.style.backgroundImage = `url(/${markermapbox.imagefile})`;
+            el.style.backgroundImage = `url(${assetUrl(markermapbox.imagefile)})`;
             return new mapboxgl.Marker({ element: el, anchor: "bottom" });
           })()
         : new mapboxgl.Marker({ anchor: "bottom" });
@@ -183,7 +180,7 @@ document.addEventListener("DOMContentLoaded", function () {
               popupimage: feature.properties.popupimage,
               openinghours: feature.properties.openinghours,
               telephonevalue: feature.properties.telephonevalue,
-            }))
+            }, "mapbox"))
         )
         .addTo(map);
     }
@@ -195,50 +192,7 @@ document.addEventListener("DOMContentLoaded", function () {
       map.setFog({}); // Set the default atmosphere style
     });
 
-    // The following values can be changed to control rotation speed:
-
-    // At low zooms, complete a revolution every two minutes.
-    const secondsPerRevolution = 240;
-    // Above zoom level 5, do not rotate.
-    const maxSpinZoom = 5;
-    // Rotate at intermediate speeds between zoom levels 3 and 5.
-    const slowSpinZoom = 3;
-
-    let userInteracting = false;
-    const spinEnabled = true;
-
-    function spinGlobe() {
-      const zoom = map.getZoom();
-      if (spinEnabled && !userInteracting && zoom < maxSpinZoom) {
-        let distancePerSecond = 360 / secondsPerRevolution;
-        if (zoom > slowSpinZoom) {
-          // Slow spinning at higher zooms
-          const zoomDif = (maxSpinZoom - zoom) / (maxSpinZoom - slowSpinZoom);
-          distancePerSecond *= zoomDif;
-        }
-        const center = map.getCenter();
-        center.lng -= distancePerSecond;
-        // Smoothly animate the map over one second.
-        // When this animation is complete, it calls a 'moveend' event.
-        map.easeTo({ center, duration: 1000, easing: (n) => n });
-      }
-    }
-
-    // Pause spinning on interaction
-    map.on("mousedown", () => {
-      userInteracting = true;
-    });
-    map.on("dragstart", () => {
-      userInteracting = true;
-    });
-
-    // When animation is complete, start spinning if there is no ongoing interaction
-    map.on("moveend", () => {
-      spinGlobe();
-    });
-    spinGlobe();
     // Set the marker point centrally by clicking on the list outside the map
-
     bindListClick({
       features,
       onSelect: (index) => {
@@ -258,7 +212,7 @@ document.addEventListener("DOMContentLoaded", function () {
             popupimage: features[index].properties.popupimage,
             openinghours: features[index].properties.openinghours,
             telephonevalue: features[index].properties.telephonevalue,
-          }))
+          }, "mapbox"))
           .addTo(map);
       },
     });
@@ -274,7 +228,7 @@ document.addEventListener("DOMContentLoaded", function () {
     const hasCustomLeafletIcon = Boolean(markermapbox && markermapbox.imagefile);
     const customIcon = hasCustomLeafletIcon
       ? L.icon({
-          iconUrl: "/" + markermapbox.imagefile,
+          iconUrl: assetUrl(markermapbox.imagefile),
           iconSize: [50, "auto"],
           iconAnchor: [27, 64],
           popupAnchor: [0, 0],
@@ -282,7 +236,7 @@ document.addEventListener("DOMContentLoaded", function () {
       : null;
 
     const markers = features.map((feature) => {
-      const datacontent = buildLeafletPopupHtml({
+      const datacontent = buildPopupHtml({
         title: feature.properties.title,
         description: feature.properties.description,
         popupimage: feature.properties.popupimage,
@@ -310,7 +264,7 @@ document.addEventListener("DOMContentLoaded", function () {
       features,
       onSelect: (index) => {
         const coordinates = features[index].geometry.coordinates;
-        const content = buildLeafletPopupHtml({
+        const content = buildPopupHtml({
           title: features[index].properties.title,
           description: features[index].properties.description,
           popupimage: features[index].properties.popupimage,
@@ -334,7 +288,7 @@ document.addEventListener("DOMContentLoaded", function () {
         if (!group) {
           return acc;
         }
-        const datacontent = buildLeafletPopupHtml({
+        const datacontent = buildPopupHtml({
           title: item.properties.title,
           description: item.properties.description,
           popupimage: item.properties.popupimage,

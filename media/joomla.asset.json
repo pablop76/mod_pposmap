@@ -12,7 +12,11 @@
       "dependencies": [
         "core"
       ],
-      "version": "1.0.0"
+      "attributes": {
+        "integrity": "sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=",
+        "crossorigin": "anonymous"
+      },
+      "version": "1.9.4"
     },
     {
       "name": "mod_pposmap.custom",
@@ -24,19 +28,23 @@
       "version": "1.0.0"
     },
     {
-      "name": "mapbox",
+      "name": "mapboxgljs",
       "type": "script",
-      "uri": "mod_pposmap/mapbox.js",
+      "uri": "https://api.mapbox.com/mapbox-gl-js/v3.25.0/mapbox-gl.js",
       "dependencies": [
         "core"
       ],
-      "version": "1.0.0"
+      "version": "3.25.0"
     },
     {
       "name": "leafletcss",
       "type": "style",
       "uri": "https://unpkg.com/leaflet@1.9.4/dist/leaflet.css",
-      "version": "1.0.0"
+      "attributes": {
+        "integrity": "sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=",
+        "crossorigin": "anonymous"
+      },
+      "version": "1.9.4"
     },
     {
       "name": "mod_pposmap.style",
@@ -45,10 +53,10 @@
       "version": "1.0.0"
     },
     {
-      "name": "stylemapbox",
+      "name": "mapboxglcss",
       "type": "style",
-      "uri": "mod_pposmap/mapbox.css",
-      "version": "1.0.0"
+      "uri": "https://api.mapbox.com/mapbox-gl-js/v3.25.0/mapbox-gl.css",
+      "version": "3.25.0"
     }
   ]
 }
