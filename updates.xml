@@ -13,6 +13,7 @@
         <downloads>
             <downloadurl type="full" format="zip">https://github.com/pablop76/mod_pposmap/releases/download/v1.0.1/mod_pposmap-1.0.1.zip</downloadurl>
         </downloads>
+        <sha256>3c164acca51a89862b86815dd01c7aecc08ef6968a788a2bca9c4a681a675f40</sha256>
         <tags>
             <tag>stable</tag>
         </tags>
