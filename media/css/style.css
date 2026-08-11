@@ -32,17 +32,29 @@
   display: block;
 }
 
-/* Mapbox GL: nasz marker (gdy używamy custom element) */
+/*
+ * Wspólna pinezka dla obu dostawców: Mapbox dostaje ten element jako marker,
+ * Leaflet jako zawartość divIcon. Rozmiar nadpisuje JS, ustawiając zmienne
+ * inline na elemencie; wartości poniżej to fallback, gdy pola są puste.
+ * background-size: contain pilnuje, żeby obrazek nie został zniekształcony.
+ */
 .marker {
   --pposmap-marker-width: 50px;
   --pposmap-marker-height: 64px;
 
+  display: block;
   background-size: contain;
   background-repeat: no-repeat;
-  background-position: center bottom;
+  background-position: center center;
   width: var(--pposmap-marker-width);
   height: var(--pposmap-marker-height);
   cursor: pointer;
+}
+
+/* Leaflet: divIcon dziedziczy z .leaflet-div-icon białe tło i szarą ramkę */
+.pposmap-leaflet-marker {
+  background: transparent;
+  border: 0;
 }
 .pposmap-map .mapboxgl-popup-content {
   background: var(--body-bg, #fff);

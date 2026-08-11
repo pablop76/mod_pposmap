@@ -106,7 +106,7 @@
                     name="listofpoints"
                     type="subform"
                     label="MOD_PPOSMAP_SUBFORM_FIELD"
-                    description="Subform Field Description"
+                    description="MOD_PPOSMAP_SUBFORM_FIELD_DESC"
                     multiple="true"
                 >
                     <form>
@@ -161,7 +161,13 @@
                             name="popupimage"
                             type="accessiblemedia"
                             directory="stories"
-                            label="Dodaj zdjęcie do popup markera" />
+                            label="MOD_PPOSMAP_POPUP_IMAGE"
+                            description="MOD_PPOSMAP_POPUP_IMAGE_DESC" />
+                        <field
+                            name="pointmarker"
+                            type="accessiblemedia"
+                            label="MOD_PPOSMAP_POINT_MARKER"
+                            description="MOD_PPOSMAP_POINT_MARKER_DESC" />
                         <field
                             name="layergroup"
                             type="text"
@@ -199,7 +205,39 @@
                     name="markermapbox"
                     type="accessiblemedia"
                     label="MOD_PPOSMAP_MARKER"
+                    description="MOD_PPOSMAP_MARKER_DESC"
                 >
+                </field>
+                <field
+                    name="markerwidth"
+                    type="number"
+                    default=""
+                    min="1"
+                    max="512"
+                    step="1"
+                    label="MOD_PPOSMAP_MARKER_WIDTH"
+                    description="MOD_PPOSMAP_MARKER_WIDTH_DESC"
+                />
+                <field
+                    name="markerheight"
+                    type="number"
+                    default=""
+                    min="1"
+                    max="512"
+                    step="1"
+                    label="MOD_PPOSMAP_MARKER_HEIGHT"
+                    description="MOD_PPOSMAP_MARKER_HEIGHT_DESC"
+                />
+                <field
+                    name="markeranchor"
+                    type="list"
+                    default="bottom"
+                    label="MOD_PPOSMAP_MARKER_ANCHOR"
+                    description="MOD_PPOSMAP_MARKER_ANCHOR_DESC"
+                >
+                    <option value="bottom">MOD_PPOSMAP_MARKER_ANCHOR_BOTTOM</option>
+                    <option value="center">MOD_PPOSMAP_MARKER_ANCHOR_CENTER</option>
+                    <option value="top">MOD_PPOSMAP_MARKER_ANCHOR_TOP</option>
                 </field>
                 <field
                     name="pointslistmapbox"

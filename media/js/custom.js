@@ -85,6 +85,79 @@ function buildImageHtml(imageObj, title, siteRoot) {
   return `<img src="${siteRoot || ""}/${file}" alt="${asString(title)}" />`;
 }
 
+const DEFAULT_MARKER_WIDTH = 50;
+const DEFAULT_MARKER_HEIGHT = 64;
+const DEFAULT_MARKER_ANCHOR = "bottom";
+
+// Ułamkowe położenie punktu zaczepienia w prostokącie ikony (0,0 = lewy górny róg).
+// Nazwy i znaczenie jak w Mapbox GL (Marker.anchor / icon-anchor); Leaflet dostaje
+// z tego przeliczone piksele. Tabela jest szersza niż lista w panelu, bo Mapbox
+// przyjmuje też narożniki, a kod nie ma powodu ich odrzucać.
+const MARKER_ANCHOR_OFFSETS = {
+  center: [0.5, 0.5],
+  top: [0.5, 0],
+  bottom: [0.5, 1],
+  left: [0, 0.5],
+  right: [1, 0.5],
+  "top-left": [0, 0],
+  "top-right": [1, 0],
+  "bottom-left": [0, 1],
+  "bottom-right": [1, 1],
+};
+
+function resolveMarkerAnchor(value) {
+  const key = asString(value).trim().toLowerCase();
+  return MARKER_ANCHOR_OFFSETS[key] ? key : DEFAULT_MARKER_ANCHOR;
+}
+
+function resolveMarkerSize(options) {
+  return {
+    width: Math.max(1, toNumber(options.markerwidth, DEFAULT_MARKER_WIDTH)),
+    height: Math.max(1, toNumber(options.markerheight, DEFAULT_MARKER_HEIGHT)),
+  };
+}
+
+function mediaFile(value) {
+  return value && value.imagefile ? String(value.imagefile) : "";
+}
+
+// Kolejność: własna pinezka punktu, potem domyślna z ustawień modułu.
+// Pusty wynik oznacza znacznik wbudowany w bibliotekę mapy.
+function resolveMarkerUrl(pointMarker, globalMarker, siteRoot) {
+  const file = mediaFile(pointMarker) || mediaFile(globalMarker);
+  return file ? `${siteRoot || ""}/${file}` : "";
+}
+
+// Jeden budowniczy elementu dla obu dostawców: Mapbox dostaje go jako element
+// markera, Leaflet jako zawartość divIcon. Dzięki temu klasa .marker w CSS jest
+// jedynym miejscem, które decyduje o wyglądzie pinezki.
+function createMarkerElement(iconUrl, title, size) {
+  const el = document.createElement("div");
+  el.className = "marker";
+  el.setAttribute("role", "img");
+  el.setAttribute("aria-label", asString(title));
+  el.style.setProperty("--pposmap-marker-width", `${size.width}px`);
+  el.style.setProperty("--pposmap-marker-height", `${size.height}px`);
+  el.style.backgroundImage = `url("${iconUrl}")`;
+  return el;
+}
+
+function buildLeafletIcon(L, iconUrl, title, size, anchorKey) {
+  const [offsetX, offsetY] = MARKER_ANCHOR_OFFSETS[anchorKey];
+  const anchorX = Math.round(size.width * offsetX);
+  const anchorY = Math.round(size.height * offsetY);
+
+  return L.divIcon({
+    className: "pposmap-leaflet-marker",
+    html: createMarkerElement(iconUrl, title, size),
+    iconSize: [size.width, size.height],
+    iconAnchor: [anchorX, anchorY],
+    // Liczone względem iconAnchor, więc -anchorY wypada przy górnej krawędzi
+    // ikony: dymek otwiera się nad pinezką, a nie na niej.
+    popupAnchor: [0, -anchorY],
+  });
+}
+
 function buildPopupHtml({ title, description, popupimage, openinghours, telephonevalue }, variant, siteRoot) {
   const imageHtml = buildImageHtml(popupimage, title, siteRoot);
   const opening = asString(openinghours).trim();
@@ -124,6 +197,7 @@ function buildFeatures(originalData) {
         popupimage: point.popupimage,
         openinghours: point.openinghours,
         telephonevalue: point.telephonevalue,
+        pointmarker: point.pointmarker,
       },
       groupname: point.layergroup,
     });
@@ -154,19 +228,15 @@ function parseMaybeJson(value) {
   }
 }
 
-function addMapboxMarkers(map, features, markermapbox, siteRoot) {
+function addMapboxMarkers(map, features, markermapbox, siteRoot, size, anchor) {
   for (const feature of features) {
-    const hasCustomMarker = Boolean(markermapbox && markermapbox.imagefile);
-    const marker = hasCustomMarker
-      ? (() => {
-          const el = document.createElement("div");
-          el.className = "marker";
-          el.setAttribute("role", "img");
-          el.setAttribute("aria-label", asString(feature.properties.title));
-          el.style.backgroundImage = `url(${siteRoot || ""}/${markermapbox.imagefile})`;
-          return new mapboxgl.Marker({ element: el, anchor: "bottom" });
-        })()
-      : new mapboxgl.Marker({ anchor: "bottom" });
+    const iconUrl = resolveMarkerUrl(feature.properties.pointmarker, markermapbox, siteRoot);
+    const marker = iconUrl
+      ? new mapboxgl.Marker({
+          element: createMarkerElement(iconUrl, feature.properties.title, size),
+          anchor,
+        })
+      : new mapboxgl.Marker({ anchor });
 
     marker
       .setLngLat(feature.geometry.coordinates)
@@ -178,15 +248,75 @@ function addMapboxMarkers(map, features, markermapbox, siteRoot) {
   }
 }
 
-function addMapboxClusters(map, mapEl, features, markermapbox, siteRoot) {
+// Mapbox GL zmieniał API loadImage między wydaniami: starsze przyjmują callback,
+// nowsze zwracają Promise i callback ignorują. Obsługujemy oba naraz, bo resolve()
+// jest idempotentne, więc zadziała ta ścieżka, która w danej wersji faktycznie żyje.
+function loadMapImage(map, url) {
+  return new Promise((resolve) => {
+    let result;
+
+    try {
+      result = map.loadImage(url, (error, image) => {
+        resolve(error || !image ? null : image);
+      });
+    } catch (e) {
+      resolve(null);
+      return;
+    }
+
+    if (result && typeof result.then === "function") {
+      result.then((value) => resolve((value && value.data) || value || null)).catch(() => resolve(null));
+    }
+  });
+}
+
+function addMapboxClusters(map, mapEl, features, markermapbox, siteRoot, size, anchor) {
   const sourceId = "pposmap-points";
   const clusterLayerId = "pposmap-clusters";
   const clusterCountLayerId = "pposmap-cluster-count";
   const pointLayerId = "pposmap-unclustered";
-  const iconName = "pposmap-marker-icon";
-  const hasCustomIcon = Boolean(markermapbox && markermapbox.imagefile);
+  const plainPointLayerId = "pposmap-unclustered-plain";
 
-  const setupLayers = () => {
+  /*
+   * W trybie klastrowania punkty nie są elementami DOM, tylko wpisami w źródle
+   * GeoJSON, więc ikona nie może być obrazkiem w CSS. Każda unikalna pinezka
+   * ląduje w rejestrze obrazków mapy pod własną nazwą, a feature niesie tę nazwę
+   * we właściwości "icon" — dzięki temu icon-image może być wyrażeniem
+   * ["get", "icon"] i każdy punkt dostaje swoją pinezkę.
+   */
+  const iconNames = new Map();
+
+  for (const feature of features) {
+    const url = resolveMarkerUrl(feature.properties.pointmarker, markermapbox, siteRoot);
+
+    if (url && !iconNames.has(url)) {
+      iconNames.set(url, `pposmap-icon-${iconNames.size}`);
+    }
+
+    feature.properties.icon = url ? iconNames.get(url) : "";
+  }
+
+  // Odpowiednik background-size: contain — obrazek wpisany w prostokąt
+  // bez zniekształcenia, tak samo jak w ścieżce bez klastrowania.
+  const iconScale = (image) =>
+    image && image.width && image.height ? Math.min(size.width / image.width, size.height / image.height) : 1;
+
+  const setupLayers = (loaded) => {
+    // Ikona, której nie udało się wczytać, zabrałaby punkt z mapy bez śladu:
+    // symbol z nieznaną nazwą obrazka po prostu się nie rysuje. Takie punkty
+    // wracają do warstwy z kółkami, żeby nie zniknęły.
+    const failed = new Set(loaded.filter((entry) => !entry.image).map((entry) => entry.name));
+
+    if (failed.size) {
+      for (const feature of features) {
+        if (failed.has(feature.properties.icon)) {
+          feature.properties.icon = "";
+        }
+      }
+    }
+
+    const usable = loaded.filter((entry) => entry.image);
+
     map.addSource(sourceId, {
       type: "geojson",
       data: { type: "FeatureCollection", features },
@@ -218,55 +348,84 @@ function addMapboxClusters(map, mapEl, features, markermapbox, siteRoot) {
       },
     });
 
-    map.addLayer(
-      hasCustomIcon
-        ? {
-            id: pointLayerId,
-            type: "symbol",
-            source: sourceId,
-            filter: ["!", ["has", "point_count"]],
-            layout: {
-              "icon-image": iconName,
-              "icon-size": 1,
-              "icon-anchor": "bottom",
-              "icon-allow-overlap": true,
-            },
-          }
-        : {
-            id: pointLayerId,
-            type: "circle",
-            source: sourceId,
-            filter: ["!", ["has", "point_count"]],
-            paint: {
-              "circle-color": "#11b4da",
-              "circle-radius": 8,
-              "circle-stroke-width": 2,
-              "circle-stroke-color": "#fff",
-            },
-          }
-    );
+    if (usable.length) {
+      // Każda ikona ma inny rozmiar źródłowy, więc jedna stała skala by nie wystarczyła.
+      let iconSize;
+
+      if (usable.length === 1) {
+        iconSize = iconScale(usable[0].image);
+      } else {
+        iconSize = ["match", ["get", "icon"]];
+
+        for (const entry of usable) {
+          iconSize.push(entry.name, iconScale(entry.image));
+        }
+
+        iconSize.push(1);
+      }
+
+      map.addLayer({
+        id: pointLayerId,
+        type: "symbol",
+        source: sourceId,
+        filter: ["all", ["!", ["has", "point_count"]], ["!=", ["get", "icon"], ""]],
+        layout: {
+          "icon-image": ["get", "icon"],
+          "icon-size": iconSize,
+          "icon-anchor": anchor,
+          "icon-allow-overlap": true,
+        },
+      });
+    }
+
+    // Punkty bez własnej i bez domyślnej pinezki (albo takie, których obrazek padł).
+    map.addLayer({
+      id: plainPointLayerId,
+      type: "circle",
+      source: sourceId,
+      filter: ["all", ["!", ["has", "point_count"]], ["==", ["get", "icon"], ""]],
+      paint: {
+        "circle-color": "#11b4da",
+        "circle-radius": 8,
+        "circle-stroke-width": 2,
+        "circle-stroke-color": "#fff",
+      },
+    });
+
+    const pointLayers = usable.length ? [pointLayerId, plainPointLayerId] : [plainPointLayerId];
 
     map.on("click", clusterLayerId, (event) => {
-      const clusterFeatures = map.queryRenderedFeatures(event.point, { layers: [clusterLayerId] });
-      const clusterId = clusterFeatures[0].properties.cluster_id;
-      map.getSource(sourceId).getClusterExpansionZoom(clusterId, (error, targetZoom) => {
+      const feature = event.features && event.features[0];
+      if (!feature) return;
+
+      const center = feature.geometry.coordinates;
+      const source = map.getSource(sourceId);
+      // Ta metoda ma ten sam problem z wersjami API co loadImage.
+      const result = source.getClusterExpansionZoom(feature.properties.cluster_id, (error, targetZoom) => {
         if (error) return;
-        map.easeTo({ center: clusterFeatures[0].geometry.coordinates, zoom: targetZoom });
+        map.easeTo({ center, zoom: targetZoom });
       });
+
+      if (result && typeof result.then === "function") {
+        result.then((targetZoom) => map.easeTo({ center, zoom: targetZoom })).catch(() => {});
+      }
     });
 
-    map.on("click", pointLayerId, (event) => {
-      const feature = event.features[0];
-      const coordinates = feature.geometry.coordinates.slice();
-      const properties = { ...feature.properties, popupimage: parseMaybeJson(feature.properties.popupimage) };
+    for (const layerId of pointLayers) {
+      map.on("click", layerId, (event) => {
+        const feature = event.features && event.features[0];
+        if (!feature) return;
 
-      new mapboxgl.Popup({ offset: 25 })
-        .setLngLat(coordinates)
-        .setHTML(buildPopupHtml(properties, "mapbox", siteRoot))
-        .addTo(map);
-    });
+        const properties = { ...feature.properties, popupimage: parseMaybeJson(feature.properties.popupimage) };
 
-    for (const layerId of [clusterLayerId, pointLayerId]) {
+        new mapboxgl.Popup({ offset: 25 })
+          .setLngLat(feature.geometry.coordinates.slice())
+          .setHTML(buildPopupHtml(properties, "mapbox", siteRoot))
+          .addTo(map);
+      });
+    }
+
+    for (const layerId of [clusterLayerId, ...pointLayers]) {
       map.on("mouseenter", layerId, () => {
         mapEl.style.cursor = "pointer";
       });
@@ -276,15 +435,20 @@ function addMapboxClusters(map, mapEl, features, markermapbox, siteRoot) {
     }
   };
 
-  if (hasCustomIcon) {
-    map.loadImage(`${siteRoot || ""}/${markermapbox.imagefile}`, (error, image) => {
-      if (!error && image && !map.hasImage(iconName)) {
-        map.addImage(iconName, image);
-      }
-      setupLayers();
-    });
+  if (iconNames.size) {
+    Promise.all(
+      Array.from(iconNames, ([url, name]) =>
+        loadMapImage(map, url).then((image) => {
+          if (image && !map.hasImage(name)) {
+            map.addImage(name, image);
+          }
+
+          return { name, image };
+        })
+      )
+    ).then(setupLayers);
   } else {
-    setupLayers();
+    setupLayers([]);
   }
 }
 
@@ -292,6 +456,8 @@ function initMapboxInstance(container, mapEl, options, features) {
   const { tokenmapbox, stylemapbox, zoommapbox, markermapbox, siteRoot, clustermarkers } = options;
   const zoom = toNumber(zoommapbox, 7);
   const clusteringEnabled = asString(clustermarkers) === "1";
+  const size = resolveMarkerSize(options);
+  const anchor = resolveMarkerAnchor(options.markeranchor);
 
   if (!tokenmapbox) {
     console.warn("mod_pposmap: Brak tokena Mapbox (tokenmapbox)");
@@ -311,9 +477,9 @@ function initMapboxInstance(container, mapEl, options, features) {
   });
 
   if (clusteringEnabled) {
-    map.on("load", () => addMapboxClusters(map, mapEl, features, markermapbox, siteRoot));
+    map.on("load", () => addMapboxClusters(map, mapEl, features, markermapbox, siteRoot, size, anchor));
   } else {
-    addMapboxMarkers(map, features, markermapbox, siteRoot);
+    addMapboxMarkers(map, features, markermapbox, siteRoot, size, anchor);
   }
 
   map.addControl(new mapboxgl.NavigationControl());
@@ -364,22 +530,26 @@ function initLeafletInstance(container, mapEl, options, features) {
   }
 
   const groupsMode = asString(groupscontrol);
+  const size = resolveMarkerSize(options);
+  const anchorKey = resolveMarkerAnchor(options.markeranchor);
 
-  const hasCustomLeafletIcon = Boolean(markermapbox && markermapbox.imagefile);
-  const customIcon = hasCustomLeafletIcon
-    ? L.icon({
-        iconUrl: `${siteRoot || ""}/${markermapbox.imagefile}`,
-        iconSize: [50, "auto"],
-        iconAnchor: [27, 64],
-        popupAnchor: [0, 0],
-      })
-    : null;
+  /*
+   * Ikona musi powstawać osobno dla każdego markera. divIcon dostaje gotowy element
+   * DOM, a jeden element nie może należeć do dwóch markerów naraz — przy grupach
+   * ten sam punkt bywa tworzony po raz drugi w warstwie grupy.
+   */
+  const createLeafletMarker = (feature) => {
+    const iconUrl = resolveMarkerUrl(feature.properties.pointmarker, markermapbox, siteRoot);
+    const markerOptions = iconUrl
+      ? { icon: buildLeafletIcon(L, iconUrl, feature.properties.title, size, anchorKey) }
+      : undefined;
 
-  const markers = features.map((feature) => {
-    const datacontent = buildPopupHtml(feature.properties, "leaflet", siteRoot);
-    const markerOptions = customIcon ? { icon: customIcon } : undefined;
-    return L.marker([feature.geometry.coordinates[1], feature.geometry.coordinates[0]], markerOptions).bindPopup(datacontent);
-  });
+    return L.marker([feature.geometry.coordinates[1], feature.geometry.coordinates[0]], markerOptions).bindPopup(
+      buildPopupHtml(feature.properties, "leaflet", siteRoot)
+    );
+  };
+
+  const markers = features.map(createLeafletMarker);
 
   const allMarkers = createMarkerLayer(L, markers, clusteringEnabled);
   const tiles = buildTileLayer(L, options);
@@ -413,9 +583,7 @@ function initLeafletInstance(container, mapEl, options, features) {
       if (!group) {
         return acc;
       }
-      const datacontent = buildPopupHtml(item.properties, "leaflet", siteRoot);
-      const markerOptions = customIcon ? { icon: customIcon } : undefined;
-      const value = L.marker([item.geometry.coordinates[1], item.geometry.coordinates[0]], markerOptions).bindPopup(datacontent);
+      const value = createLeafletMarker(item);
 
       if (!acc[group]) {
         acc[group] = [];
