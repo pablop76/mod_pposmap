@@ -9,10 +9,18 @@
   min-height: var(--pposmap-height, 500px);
 }
 
+/*
+ * min-width: 0 jest tu obowiązkowe. Element flex ma domyślnie min-width: auto,
+ * czyli nie zwęzi się poniżej swojej szerokości minimalnej, a tę podbija pasek
+ * atrybucji w środku mapy („Leaflet | © OpenStreetMap contributors”). Bez tego
+ * kontener robi się szerszy od dostępnego miejsca i rozpycha całą stronę
+ * poziomym paskiem przewijania.
+ */
 .pposmap-map {
+  flex: 1 1 auto;
+  min-width: 0;
   height: var(--pposmap-height, 500px);
   min-height: var(--pposmap-height, 500px);
-  width: 100%;
 }
 
 /* Mapbox GL: dopilnuj, żeby canvas wypełniał kontener .pposmap-map */
@@ -73,6 +81,9 @@
   display: flex;
   flex-direction: row;
   width: 100%;
+  max-width: 100%;
+  /* Nic w środku nie ma prawa wystawać poza moduł */
+  overflow: hidden;
 }
 
 /*
@@ -187,6 +198,8 @@
     min-height: var(--pposmap-height-mobile, var(--pposmap-height, 400px));
   }
   .pposmap-map {
+    /* W kolumnie flex-grow rozciągałby mapę na wysokość, a ta ma być z parametru */
+    flex: 0 0 auto;
     height: var(--pposmap-height-mobile, var(--pposmap-height, 400px));
     min-height: var(--pposmap-height-mobile, var(--pposmap-height, 400px));
   }
