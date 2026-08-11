@@ -1,7 +1,7 @@
 {
   "$schema": "https://developer.joomla.org/schemas/json-schema/web_assets.json",
   "name": "mod_pposmap",
-  "version": "1.1.6",
+  "version": "1.1.7",
   "description": "Joomla Module OpenStreetMap",
   "license": "GPL-2.0-or-later",
   "assets": [
@@ -25,7 +25,7 @@
       "dependencies": [
         "core"
       ],
-      "version": "1.1.6"
+      "version": "1.1.7"
     },
     {
       "name": "leafletmarkercluster",
@@ -59,7 +59,7 @@
       "name": "mod_pposmap.style",
       "type": "style",
       "uri": "mod_pposmap/style.css",
-      "version": "1.1.6"
+      "version": "1.1.7"
     },
     {
       "name": "mapboxglcss",

@@ -112,23 +112,32 @@
         return implode(' ', $string);
     };
 
-    $mapHeightCss = '';
-    if ($mapHeightRaw !== '') {
-        $mapHeightCss = preg_match('/^\d+$/', $mapHeightRaw) ? ($mapHeightRaw . 'px') : $mapHeightRaw;
-    }
+    // Samo "500" jest wygodniejsze do wpisania niż "500px", a "70vh" czy "25%"
+    // trzeba przepuścić bez zmian.
+    $toCssLength = static function ($value) {
+        $value = trim((string) $value);
 
-    $mapHeightMobileCss = '';
-    if ($mapHeightMobileRaw !== '') {
-        $mapHeightMobileCss = preg_match('/^\d+$/', $mapHeightMobileRaw) ? ($mapHeightMobileRaw . 'px') : $mapHeightMobileRaw;
-    }
+        if ($value === '') {
+            return '';
+        }
+
+        return preg_match('/^\d+$/', $value) ? ($value . 'px') : $value;
+    };
+
+    $cssVariables = [
+        '--pposmap-height'        => $toCssLength($mapHeightRaw),
+        '--pposmap-height-mobile' => $toCssLength($mapHeightMobileRaw),
+        '--pposmap-list-width'    => $toCssLength($params->get('listwidth', '')),
+    ];
 
     $wrapperStyleParts = [];
-    if ($mapHeightCss !== '') {
-        $wrapperStyleParts[] = '--pposmap-height: ' . htmlspecialchars($mapHeightCss, ENT_QUOTES, 'UTF-8') . ';';
+
+    foreach ($cssVariables as $name => $value) {
+        if ($value !== '') {
+            $wrapperStyleParts[] = $name . ': ' . htmlspecialchars($value, ENT_QUOTES, 'UTF-8') . ';';
+        }
     }
-    if ($mapHeightMobileCss !== '') {
-        $wrapperStyleParts[] = '--pposmap-height-mobile: ' . htmlspecialchars($mapHeightMobileCss, ENT_QUOTES, 'UTF-8') . ';';
-    }
+
     $wrapperStyleAttr = $wrapperStyleParts ? (' style="' . implode(' ', $wrapperStyleParts) . '"') : '';
 
     $isMapbox = ((string) $mapboxorleaflet) === '0' || $mapboxorleaflet === '';
@@ -183,9 +192,9 @@
     <div class="pposmap-list">
         <?php foreach ($validPoints as $index => $point) : ?>
         <div class="pposmap-list-item">
-            <h3 class="pposmap-list-item-title mapbox-popup-title"><?php echo $point->geotitle ?? ''; ?></h3>
+            <h3 class="pposmap-list-item-title"><?php echo $point->geotitle ?? ''; ?></h3>
             <div class="pposmap-list-item-row">
-                <p class="mapbox-popup-description"><?php echo $limitString($point->geodescription ?? '', 9); ?></p>
+                <p class="pposmap-list-item-desc"><?php echo $limitString($point->geodescription ?? '', 9); ?></p>
                 <button
                     type="button"
                     data-index="<?php echo $index; ?>"

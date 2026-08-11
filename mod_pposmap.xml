@@ -250,6 +250,14 @@
                     <option value="1">JSHOW</option>
                 </field>
                 <field
+                    name="listwidth"
+                    type="text"
+                    default=""
+                    label="MOD_PPOSMAP_LIST_WIDTH"
+                    description="MOD_PPOSMAP_LIST_WIDTH_DESC"
+                    showon="pointslistmapbox:1"
+                />
+                <field
                     name="viewbuttontext"
                     type="text"
                     default=""
