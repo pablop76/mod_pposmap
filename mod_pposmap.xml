@@ -46,6 +46,51 @@
                     showon="mapboxorleaflet:0"
                 >
                 </field>
+                <!--
+                    Celowo type="text", NIE type="url": adres z polami {z}/{x}/{y} oraz
+                    ścieżka względna do własnych kafelków nie przechodzą walidacji
+                    przeglądarki i blokują zapis całego formularza modułu.
+                -->
+                <field
+                    name="tileurl"
+                    type="text"
+                    default=""
+                    label="MOD_PPOSMAP_TILE_URL"
+                    description="MOD_PPOSMAP_TILE_URL_DESC"
+                    showon="mapboxorleaflet:1"
+                    filter="string"
+                />
+                <field
+                    name="tileattribution"
+                    type="text"
+                    default=""
+                    label="MOD_PPOSMAP_TILE_ATTRIBUTION"
+                    description="MOD_PPOSMAP_TILE_ATTRIBUTION_DESC"
+                    showon="mapboxorleaflet:1"
+                    filter="safehtml"
+                />
+                <field
+                    name="tileminzoom"
+                    type="number"
+                    default=""
+                    min="0"
+                    max="22"
+                    step="1"
+                    label="MOD_PPOSMAP_TILE_MIN_ZOOM"
+                    description="MOD_PPOSMAP_TILE_MIN_ZOOM_DESC"
+                    showon="mapboxorleaflet:1"
+                />
+                <field
+                    name="tilemaxzoom"
+                    type="number"
+                    default=""
+                    min="0"
+                    max="22"
+                    step="1"
+                    label="MOD_PPOSMAP_TILE_MAX_ZOOM"
+                    description="MOD_PPOSMAP_TILE_MAX_ZOOM_DESC"
+                    showon="mapboxorleaflet:1"
+                />
                 <field
                     name="groupscontrol"
                     showon="mapboxorleaflet:1"
@@ -132,7 +177,7 @@
                     name="zoommapbox"
                     type="integer"
                     label="MOD_PPOSMAP_ZOOM"
-                    first="0" last="15" step="1"
+                    first="0" last="22" step="1"
                     default="7"
                 >
                 </field>

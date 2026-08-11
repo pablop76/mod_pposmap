@@ -24,6 +24,47 @@ function asString(value) {
   return value == null ? "" : String(value);
 }
 
+const DEFAULT_TILE_URL = "https://tile.openstreetmap.org/{z}/{x}/{y}.png";
+const DEFAULT_TILE_ATTRIBUTION =
+  '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors';
+
+function buildTileLayer(L, options) {
+  const customUrl = asString(options.tileurl).trim();
+  const customAttribution = asString(options.tileattribution).trim();
+
+  const url = customUrl || DEFAULT_TILE_URL;
+  const attribution = customAttribution || DEFAULT_TILE_ATTRIBUTION;
+
+  if (customUrl && !(/\{z\}/.test(url) && /\{x\}/.test(url) && /\{y\}/.test(url))) {
+    console.warn(
+      "mod_pposmap: adres kafelków nie zawiera pól {z}/{x}/{y} — Leaflet nie pobierze żadnego kafelka."
+    );
+  }
+
+  // Atrybucja jest warunkiem licencji u większości dostawców, a domyślna
+  // (OpenStreetMap) przestaje być prawdziwa w momencie podmiany serwera kafelków.
+  if (customUrl && !customAttribution) {
+    console.warn(
+      "mod_pposmap: ustawiono własny serwer kafelków, ale nie ustawiono atrybucji. " +
+        "Mapa pokazuje atrybucję OpenStreetMap, co zwykle narusza licencję dostawcy kafelków."
+    );
+  }
+
+  const layerOptions = { attribution };
+  const minZoom = toNumber(options.tileminzoom, null);
+  const maxZoom = toNumber(options.tilemaxzoom, null);
+
+  if (minZoom !== null) {
+    layerOptions.minZoom = minZoom;
+  }
+
+  if (maxZoom !== null) {
+    layerOptions.maxZoom = maxZoom;
+  }
+
+  return L.tileLayer(url, layerOptions);
+}
+
 function buildTelephoneLink(phoneValue) {
   const raw = asString(phoneValue).trim();
   if (!raw) return "";
@@ -341,14 +382,12 @@ function initLeafletInstance(container, mapEl, options, features) {
   });
 
   const allMarkers = createMarkerLayer(L, markers, clusteringEnabled);
-  const osm = L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
-    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
-  });
+  const tiles = buildTileLayer(L, options);
 
   const map = L.map(mapEl, {
     center: [features[0].geometry.coordinates[1], features[0].geometry.coordinates[0]],
     zoom,
-    layers: [osm, allMarkers],
+    layers: [tiles, allMarkers],
     scrollWheelZoom: false,
   });
 

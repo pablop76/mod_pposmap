@@ -30,6 +30,10 @@
     $groupscontrol            = $params->get('groupscontrol', '');
     $mapHeightRaw             = trim((string) $params->get('mapheight', ''));
     $mapHeightMobileRaw       = trim((string) $params->get('mapheight_mobile', ''));
+    $tileUrl                  = trim((string) $params->get('tileurl', ''));
+    $tileAttribution          = trim((string) $params->get('tileattribution', ''));
+    $tileMinZoom              = trim((string) $params->get('tileminzoom', ''));
+    $tileMaxZoom              = trim((string) $params->get('tilemaxzoom', ''));
 
     /*
      * Jedna kanoniczna, gęsto indeksowana lista punktów. Używa jej lista w HTML, blok
@@ -144,6 +148,10 @@
         'groupscontrol'   => $groupscontrol,
         'mapboxorleaflet' => $mapboxorleaflet,
         'clustermarkers'  => $clustermarkers,
+        'tileurl'         => $tileUrl,
+        'tileattribution' => $tileAttribution,
+        'tileminzoom'     => $tileMinZoom,
+        'tilemaxzoom'     => $tileMaxZoom,
         'allFilterLeaflet' => Text::_('MOD_PPOSMAP_GROUP_LEAFLET_ALL'),
         'siteRoot'        => rtrim(Uri::root(), '/'),
     ]);

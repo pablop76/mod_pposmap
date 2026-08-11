@@ -28,6 +28,21 @@ Moduł obsługuje dwa tryby:
 - **Kontrola grup na mapie** (Leaflet): pozwala grupować markery po polu „Nazwa grupy”.
 - **Punkty na mapie**: dodawane w subform (lat/lng, tytuł, opis, godziny, telefon, obrazek, opcjonalnie grupa).
 
+### Serwer kafelków (tylko tryb Leaflet)
+
+- **Adres serwera kafelków**: szablon adresu z polami `{z}/{x}/{y}`, np. `https://tile.thunderforest.com/cycle/{z}/{x}/{y}.png?apikey=KLUCZ`.
+	Klucz API dopisuje się jako zwykły parametr adresu. Działa też ścieżka względna do kafelków hostowanych u siebie (`/tiles/{z}/{x}/{y}.png`).
+	Gdy puste, moduł używa kafelków OpenStreetMap.
+- **Atrybucja kafelków**: napis o prawach autorskich w rogu mapy, dozwolone odnośniki HTML.
+	Gdy puste, pokazywana jest atrybucja OpenStreetMap.
+
+	> Po podmianie serwera kafelków **trzeba** ustawić własną atrybucję. Domyślna przestaje być prawdziwa,
+	> a atrybucja jest warunkiem licencji u większości dostawców. Moduł wypisuje ostrzeżenie w konsoli przeglądarki,
+	> gdy ustawiono własny adres kafelków bez atrybucji.
+
+- **Minimalne / maksymalne przybliżenie kafelków**: limity dostawcy. Powyżej maksimum mapa pokazuje szare pola
+	zamiast kafelków. OpenStreetMap obsługuje 19. Gdy puste, obowiązują domyślne ustawienia Leafletu.
+
 ### Ustawienia mapy
 
 - **Zoom**: domyślny zoom mapy.
