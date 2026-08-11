@@ -10,6 +10,12 @@ function getLeaflet() {
 }
 
 function toNumber(value, fallback) {
+  // Uwaga: Number("") i Number(null) dają 0, nie NaN. Bez tych dwóch warunków
+  // pusta współrzędna stawiała marker na 0,0 (Zatoka Gwinejska), a pusty zoom
+  // dawał zoom 0 zamiast wartości domyślnej.
+  if (value === null || value === undefined) return fallback;
+  if (typeof value === "string" && value.trim() === "") return fallback;
+
   const numberValue = Number(value);
   return Number.isFinite(numberValue) ? numberValue : fallback;
 }
@@ -387,6 +393,11 @@ function initLeafletInstance(container, mapEl, options, features) {
 }
 
 function initPposmapInstance(container) {
+  // Zabezpieczenie przed podwójną inicjalizacją (skrypt wczytany dwa razy,
+  // moduł wstrzyknięty przez AJAX itp.) — dwie mapy w jednym kontenerze.
+  if (container.dataset.pposmapReady === "1") return;
+  container.dataset.pposmapReady = "1";
+
   const moduleId = container.dataset.pposmapId;
   const options = Joomla.getOptions(`mod_pposmap.vars.${moduleId}`) || {};
   const mapEl = container.querySelector(".pposmap-map");
@@ -406,6 +417,15 @@ function initPposmapInstance(container) {
   }
 }
 
-document.addEventListener("DOMContentLoaded", function () {
+function initAllPposmapInstances() {
   document.querySelectorAll(".table-pposmap[data-pposmap-id]").forEach(initPposmapInstance);
-});
+}
+
+// Nie wolno polegać wyłącznie na DOMContentLoaded: optymalizatory (LiteSpeed Cache,
+// JCH Optimize) potrafią odroczyć ten plik do pierwszej interakcji użytkownika,
+// czyli do momentu, w którym zdarzenie już dawno poleciało i mapa nigdy nie wystartuje.
+if (document.readyState === "loading") {
+  document.addEventListener("DOMContentLoaded", initAllPposmapInstances, { once: true });
+} else {
+  initAllPposmapInstances();
+}

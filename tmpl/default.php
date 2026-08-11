@@ -31,30 +31,71 @@
     $mapHeightRaw             = trim((string) $params->get('mapheight', ''));
     $mapHeightMobileRaw       = trim((string) $params->get('mapheight_mobile', ''));
 
-    $pointsForSchema = (array) $listofpoints;
-    $schemaItems = [];
-    foreach ($pointsForSchema as $point) {
-        if (!isset($point->latitudemapbox, $point->longitudemapbox) || $point->latitudemapbox === '' || $point->longitudemapbox === '') {
+    /*
+     * Jedna kanoniczna, gęsto indeksowana lista punktów. Używa jej lista w HTML, blok
+     * Schema.org ORAZ front (trafia do addScriptOptions poniżej). Dzięki temu data-index
+     * przycisku "ZOBACZ" jest z definicji tym samym indeksem, co w tablicy features
+     * budowanej w custom.js — nie zależy od tego, czy obie strony odfiltrują tak samo.
+     *
+     * Klucze subformu Joomla (listofpoints0, listofpoints1, ...) NIE są przenumerowywane
+     * po usunięciu wiersza ze środka, więc nie wolno po nich iterować licznikiem.
+     */
+    $validPoints = [];
+
+    foreach ((array) $listofpoints as $point) {
+        // Nietknięty parametr ma wartość '' — rzutowanie na tablicę daje [''], nie [].
+        if (!\is_object($point) && !\is_array($point)) {
             continue;
         }
-        $item = [
-            '@type'    => 'Place',
-            'position' => count($schemaItems) + 1,
-            'name'     => (string) ($point->geotitle ?? ''),
-            'geo'      => [
-                '@type'     => 'GeoCoordinates',
-                'latitude'  => (float) $point->latitudemapbox,
-                'longitude' => (float) $point->longitudemapbox,
-            ],
-        ];
-        if (!empty($point->geodescription)) {
-            $item['description'] = (string) $point->geodescription;
+
+        $point = (object) $point;
+        $lat   = isset($point->latitudemapbox) ? trim((string) $point->latitudemapbox) : '';
+        $lng   = isset($point->longitudemapbox) ? trim((string) $point->longitudemapbox) : '';
+
+        if ($lat === '' || $lng === '' || !is_numeric($lat) || !is_numeric($lng)) {
+            continue;
         }
-        if (!empty($point->telephonevalue)) {
-            $item['telephone'] = (string) $point->telephonevalue;
-        }
-        $schemaItems[] = $item;
+
+        $validPoints[] = $point;
     }
+
+    $schemaItems = [];
+
+    if ($addSchema) {
+        foreach ($validPoints as $index => $point) {
+            $item = [
+                '@type'    => 'Place',
+                'position' => $index + 1,
+                'name'     => (string) ($point->geotitle ?? ''),
+                'geo'      => [
+                    '@type'     => 'GeoCoordinates',
+                    'latitude'  => (float) $point->latitudemapbox,
+                    'longitude' => (float) $point->longitudemapbox,
+                ],
+            ];
+
+            if (!empty($point->geodescription)) {
+                $item['description'] = (string) $point->geodescription;
+            }
+
+            if (!empty($point->telephonevalue)) {
+                $item['telephone'] = (string) $point->telephonevalue;
+            }
+
+            $schemaItems[] = $item;
+        }
+    }
+
+    $limitString = static function ($string, $limit, $end = '...') {
+        $string = explode(' ', (string) $string, (int) $limit);
+
+        if (count($string) >= (int) $limit) {
+            array_pop($string);
+            return implode(' ', $string) . $end;
+        }
+
+        return implode(' ', $string);
+    };
 
     $mapHeightCss = '';
     if ($mapHeightRaw !== '') {
@@ -97,7 +138,7 @@
     $document->addScriptOptions('mod_pposmap.vars.' . $moduleId, [
         'tokenmapbox'     => $tokenmapbox,
         'stylemapbox'     => $stylemapbox,
-        'listofpoints'    => $listofpoints,
+        'listofpoints'    => $validPoints,
         'zoommapbox'      => $zoommapbox,
         'markermapbox'    => $markermapbox,
         'groupscontrol'   => $groupscontrol,
@@ -119,39 +160,21 @@
 ], JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT); ?></script>
 <?php endif; ?>
 <div class="flex-container table-pposmap" data-pposmap-id="<?php echo $moduleId; ?>"<?php echo $wrapperStyleAttr; ?>>
-    <?php if ($pointslistmapbox) {?>
+    <?php if ($pointslistmapbox && $validPoints) : ?>
     <div class="list-items-container uk-visible@m">
-        <?php
-            $points = $listofpoints;
-            $limitString = static function ($string, $limit, $end = '...') {
-                $string = explode(' ', (string) $string, (int) $limit);
-
-                if (count($string) >= (int) $limit) {
-                    array_pop($string);
-                    return implode(' ', $string) . $end;
-                }
-
-                return implode(' ', $string);
-            };
-
-                $pointsCount = count((array) $listofpoints);
-                for ($i = 0; $i < $pointsCount; $i++) {
-                $point = $points->{"listofpoints" . $i}; ?>
+        <?php foreach ($validPoints as $index => $point) : ?>
         <div class="list-item">
             <div>
-                <h3 class="location mapbox-popup-title"><?php echo $point->geotitle; ?></h3>
+                <h3 class="location mapbox-popup-title"><?php echo $point->geotitle ?? ''; ?></h3>
             </div>
             <div class="uk-flex uk-flex-between uk-flex-middle">
-                <p class="mapbox-popup-description"><?php echo $limitString($point->geodescription, 9); ?></p>
-                <button type="button" data-index='<?php echo $i; ?>' class="uk-button uk-button-default button-1"><?php echo Text::_('MOD_PPOSMAP_VIEW_BUTTON'); ?></button>
+                <p class="mapbox-popup-description"><?php echo $limitString($point->geodescription ?? '', 9); ?></p>
+                <button type="button" data-index="<?php echo $index; ?>" class="uk-button uk-button-default button-1"><?php echo Text::_('MOD_PPOSMAP_VIEW_BUTTON'); ?></button>
             </div>
         </div>
-        <?php
-        }?>
+        <?php endforeach; ?>
     </div>
-    <?php
-        }
-        ?>
+    <?php endif; ?>
     <div class="pposmap-map"></div>
 </div>
 <!-- End slideshow -->

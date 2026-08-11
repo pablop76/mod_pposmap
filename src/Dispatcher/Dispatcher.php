@@ -28,6 +28,9 @@ class Dispatcher implements DispatcherInterface
         $language->load('mod_pposmap', JPATH_BASE . '/modules/mod_pposmap');
         $params = new Registry($this->module->params);
 
-        require ModuleHelper::getLayoutPath('mod_pposmap');
+        // Drugi argument jest obowiązkowy, żeby zadziałało pole "Layout" z zakładki
+        // Zaawansowane modułu i alternatywne nadpisania w szablonie. Bez niego
+        // ModuleHelper zawsze ładuje tmpl/default.php.
+        require ModuleHelper::getLayoutPath('mod_pposmap', $params->get('layout', 'default'));
     }
 }
