@@ -133,7 +133,7 @@ function resolveMarkerUrl(pointMarker, globalMarker, siteRoot) {
 // jedynym miejscem, które decyduje o wyglądzie pinezki.
 function createMarkerElement(iconUrl, title, size) {
   const el = document.createElement("div");
-  el.className = "marker";
+  el.className = "pposmap-marker";
   el.setAttribute("role", "img");
   el.setAttribute("aria-label", asString(title));
   el.style.setProperty("--pposmap-marker-width", `${size.width}px`);

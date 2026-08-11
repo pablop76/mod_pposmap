@@ -34,6 +34,17 @@
     $tileAttribution          = trim((string) $params->get('tileattribution', ''));
     $tileMinZoom              = trim((string) $params->get('tileminzoom', ''));
     $tileMaxZoom              = trim((string) $params->get('tilemaxzoom', ''));
+    $viewButtonText           = trim((string) $params->get('viewbuttontext', ''));
+    $viewButtonClass          = trim((string) $params->get('viewbuttonclass', ''));
+
+    $viewButtonLabel = $viewButtonText !== '' ? $viewButtonText : Text::_('MOD_PPOSMAP_VIEW_BUTTON');
+
+    /*
+     * Puste pole klas oznacza własny styl modułu. Podane klasy zastępują go w całości,
+     * zamiast się z nim sumować — inaczej reguły modułu i frameworka szablonu biłyby się
+     * o kolejność w arkuszach i wynik zależałby od tego, który plik wczytał się później.
+     */
+    $viewButtonClassAttr = $viewButtonClass !== '' ? $viewButtonClass : 'pposmap-button';
 
     /*
      * Jedna kanoniczna, gęsto indeksowana lista punktów. Używa jej lista w HTML, blok
@@ -167,17 +178,20 @@
     'itemListElement' => $schemaItems,
 ], JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT); ?></script>
 <?php endif; ?>
-<div class="flex-container table-pposmap" data-pposmap-id="<?php echo $moduleId; ?>"<?php echo $wrapperStyleAttr; ?>>
+<div class="pposmap-container table-pposmap" data-pposmap-id="<?php echo $moduleId; ?>"<?php echo $wrapperStyleAttr; ?>>
     <?php if ($pointslistmapbox && $validPoints) : ?>
-    <div class="list-items-container uk-visible@m">
+    <div class="pposmap-list">
         <?php foreach ($validPoints as $index => $point) : ?>
-        <div class="list-item">
-            <div>
-                <h3 class="location mapbox-popup-title"><?php echo $point->geotitle ?? ''; ?></h3>
-            </div>
-            <div class="uk-flex uk-flex-between uk-flex-middle">
+        <div class="pposmap-list-item">
+            <h3 class="pposmap-list-item-title mapbox-popup-title"><?php echo $point->geotitle ?? ''; ?></h3>
+            <div class="pposmap-list-item-row">
                 <p class="mapbox-popup-description"><?php echo $limitString($point->geodescription ?? '', 9); ?></p>
-                <button type="button" data-index="<?php echo $index; ?>" class="uk-button uk-button-default button-1"><?php echo Text::_('MOD_PPOSMAP_VIEW_BUTTON'); ?></button>
+                <button
+                    type="button"
+                    data-index="<?php echo $index; ?>"
+                    class="<?php echo htmlspecialchars($viewButtonClassAttr, ENT_QUOTES, 'UTF-8'); ?>"
+                    aria-label="<?php echo htmlspecialchars(trim($viewButtonLabel . ' ' . ($point->geotitle ?? '')), ENT_QUOTES, 'UTF-8'); ?>"
+                ><?php echo htmlspecialchars($viewButtonLabel, ENT_QUOTES, 'UTF-8'); ?></button>
             </div>
         </div>
         <?php endforeach; ?>

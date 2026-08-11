@@ -35,7 +35,7 @@
  * inline na elemencie; wartości poniżej to fallback, gdy pola są puste.
  * background-size: contain pilnuje, żeby obrazek nie został zniekształcony.
  */
-.marker {
+.pposmap-marker {
   --pposmap-marker-width: 50px;
   --pposmap-marker-height: 64px;
 
@@ -69,13 +69,13 @@
 .pposmap-map .mapboxgl-popup-content a:visited {
   color: currentColor;
 }
-.flex-container {
+.pposmap-container {
   display: flex;
   flex-direction: row;
   width: 100%;
 }
 
-.list-items-container {
+.pposmap-list {
   max-height: var(--pposmap-height, 500px);
   width: 22%;
   overflow: auto;
@@ -83,33 +83,70 @@
   scrollbar-width: thin;
   padding-top: 25px;
 }
+
 /*
  * Wygląd kafelka listy celowo neutralny, żeby moduł pasował do dowolnego szablonu.
  * Półprzezroczysta szarość czyta się i na jasnym, i na ciemnym tle. Do zmiany
  * pod konkretny projekt wystarczy nadpisać zmienne w CSS szablonu.
  */
-.list-item {
+.pposmap-list-item {
   background-color: var(--pposmap-list-item-bg, rgba(127, 127, 127, 0.08));
   padding: var(--pposmap-list-item-padding, 20px);
   margin: 0 10px 10px;
   border-radius: var(--pposmap-list-item-radius, 4px);
 }
-h3.location {
-  padding: 10px 0;
+
+.pposmap-list-item:hover {
+  box-shadow: rgba(149, 157, 165, 0.2) 0 4px 9px;
+}
+
+.pposmap-list-item-title {
+  padding: 0 0 10px;
   font-weight: normal;
-  padding-top: 0;
   margin: 0;
 }
-.list-item:hover {
-  box-shadow: rgba(149, 157, 165, 0.2) 0px 4px 9px;
+
+.pposmap-list-item-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+}
+
+.pposmap-list-item-row p {
+  margin: 0;
+}
+
+/*
+ * Przycisk bez żadnego frameworka: moduł nie ładuje ani Bootstrapa, ani UIkita,
+ * więc nie może polegać na ich klasach. Gdy w ustawieniach modułu podano własne
+ * klasy, ta w ogóle nie trafia do markupu, więc style się nie mieszają.
+ */
+.pposmap-button {
+  flex: none;
+  padding: 6px 14px;
+  border: 1px solid currentColor;
+  border-radius: var(--pposmap-button-radius, 4px);
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-size: 0.85em;
+  line-height: 1.4;
+  cursor: pointer;
+}
+
+.pposmap-button:hover,
+.pposmap-button:focus-visible {
+  background: rgba(127, 127, 127, 0.15);
 }
 
 .leaflet-popup-content img {
   width: 100%;
 }
-/* Responsive layout - makes a one column layout instead of a two-column layout */
+
+/* Układ jednokolumnowy zamiast dwukolumnowego */
 @media (max-width: 800px) {
-  .flex-container {
+  .pposmap-container {
     flex-direction: column;
   }
   .table-pposmap {
@@ -119,12 +156,12 @@ h3.location {
     height: var(--pposmap-height-mobile, var(--pposmap-height, 400px));
     min-height: var(--pposmap-height-mobile, var(--pposmap-height, 400px));
   }
-  .list-items-container {
-    width: 100%;
-    max-height: var(--pposmap-height-mobile, var(--pposmap-height, 400px));
-    overflow: auto;
-    scrollbar-color: rgba(127, 127, 127, 0.4) transparent;
-    scrollbar-width: thin;
-    padding-top: 25px;
+  /*
+   * Opcja w panelu obiecuje listę „tylko na desktop”. Wcześniej pilnowała tego
+   * klasa uk-visible@m, czyli UIkit, którego moduł nigdy nie ładował — na
+   * szablonie bez UIkita lista pokazywała się także na telefonie.
+   */
+  .pposmap-list {
+    display: none;
   }
 }
