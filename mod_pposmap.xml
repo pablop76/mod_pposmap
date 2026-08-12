@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <extension type="module" client="site" method="upgrade">
     <name>MOD_PPOSMAP_NAME</name>
-    <version>1.2.0</version>
+    <version>1.3.0</version>
     <author>pablop76</author>
     <creationDate>12.08.2026</creationDate>
     <description>MOD_PPOSMAP_DESCRIPTION</description>
