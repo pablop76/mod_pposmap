@@ -157,6 +157,51 @@
                             filter="string"
                         >
                         </field>
+                        <!-- Poniższe pola zasilają dane strukturalne Schema.org.
+                             PostalAddress wymaga rozbicia adresu na składniki,
+                             więc nie da się tego wziąć z pola opisu. -->
+                        <field
+                            name="streetaddress"
+                            type="text"
+                            label="MOD_PPOSMAP_STREET_ADDRESS"
+                            description="MOD_PPOSMAP_STREET_ADDRESS_DESC"
+                            filter="string"
+                        />
+                        <field
+                            name="postalcode"
+                            type="text"
+                            label="MOD_PPOSMAP_POSTAL_CODE"
+                            filter="string"
+                        />
+                        <field
+                            name="addresslocality"
+                            type="text"
+                            label="MOD_PPOSMAP_ADDRESS_LOCALITY"
+                            filter="string"
+                        />
+                        <field
+                            name="schemaopeninghours"
+                            type="textarea"
+                            rows="3"
+                            label="MOD_PPOSMAP_SCHEMA_OPENING_HOURS"
+                            description="MOD_PPOSMAP_SCHEMA_OPENING_HOURS_DESC"
+                            filter="string"
+                        />
+                        <field
+                            name="pointurl"
+                            type="text"
+                            label="MOD_PPOSMAP_POINT_URL"
+                            description="MOD_PPOSMAP_POINT_URL_DESC"
+                            filter="string"
+                        />
+                        <field
+                            name="sameas"
+                            type="textarea"
+                            rows="2"
+                            label="MOD_PPOSMAP_SAME_AS"
+                            description="MOD_PPOSMAP_SAME_AS_DESC"
+                            filter="string"
+                        />
                         <field
                             name="popupimage"
                             type="accessiblemedia"
@@ -285,6 +330,39 @@
                     <option value="0">JHIDE</option>
                     <option value="1">JSHOW</option>
                 </field>
+                <field
+                    name="schematype"
+                    type="list"
+                    default="Place"
+                    label="MOD_PPOSMAP_SCHEMA_TYPE"
+                    description="MOD_PPOSMAP_SCHEMA_TYPE_DESC"
+                    showon="addschema:1"
+                >
+                    <option value="Place">MOD_PPOSMAP_SCHEMA_TYPE_PLACE</option>
+                    <option value="LocalBusiness">MOD_PPOSMAP_SCHEMA_TYPE_LOCALBUSINESS</option>
+                    <option value="Store">MOD_PPOSMAP_SCHEMA_TYPE_STORE</option>
+                    <option value="Restaurant">MOD_PPOSMAP_SCHEMA_TYPE_RESTAURANT</option>
+                </field>
+                <field
+                    name="schemaownlocations"
+                    type="radio"
+                    default="0"
+                    label="MOD_PPOSMAP_SCHEMA_OWN_LOCATIONS"
+                    description="MOD_PPOSMAP_SCHEMA_OWN_LOCATIONS_DESC"
+                    showon="addschema:1[AND]schematype!:Place"
+                    layout="joomla.form.field.radio.switcher">
+                    <option value="0">JNO</option>
+                    <option value="1">JYES</option>
+                </field>
+                <field
+                    name="addresscountry"
+                    type="text"
+                    default=""
+                    label="MOD_PPOSMAP_ADDRESS_COUNTRY"
+                    description="MOD_PPOSMAP_ADDRESS_COUNTRY_DESC"
+                    showon="addschema:1"
+                    filter="string"
+                />
                 <field
                     name="clustermarkers"
                     type="radio"

@@ -74,30 +74,139 @@
         $validPoints[] = $point;
     }
 
-    $schemaItems = [];
+    $schemaGraph = [];
 
     if ($addSchema) {
+        $schemaType     = (string) $params->get('schematype', 'Place');
+        $addressCountry = trim((string) $params->get('addresscountry', ''));
+        $siteRootUrl    = rtrim(Uri::root(), '/');
+
+        /*
+         * parentOrganization jest właściwością Organization, a LocalBusiness dziedziczy
+         * i po Organization, i po Place — na gołym Place byłoby więc nieprawidłowe.
+         * Powiązanie z organizacją ma sens tylko dla własnych placówek: podpięcie cudzej
+         * firmy pod swoją organizację wprowadzałoby wyszukiwarkę w błąd.
+         */
+        $ownLocations   = $schemaType !== 'Place' && (string) $params->get('schemaownlocations', '0') === '1';
+        $organizationId = $siteRootUrl . '/#organization';
+
+        if ($ownLocations) {
+            $schemaGraph[] = [
+                '@type' => 'Organization',
+                '@id'   => $organizationId,
+                'name'  => (string) $this->app->get('sitename'),
+                'url'   => $siteRootUrl . '/',
+            ];
+        }
+
+        // Jedna reguła w wierszu; przecinek jest częścią składni Schema.org
+        // ("Mo,Tu 09:00-12:00"), więc nie może służyć za separator.
+        $linesToArray = static function ($value) {
+            return array_values(array_filter(array_map('trim', preg_split('/\R/', (string) $value))));
+        };
+
+        // Pola typu accessiblemedia trzymają ścieżkę z doklejonym fragmentem
+        // "#joomlaImage://...". W adresie w danych strukturalnych nie ma on czego szukać.
+        $absoluteImageUrl = static function ($media) use ($siteRootUrl) {
+            $file = is_object($media) && !empty($media->imagefile) ? (string) $media->imagefile : '';
+
+            if ($file === '') {
+                return '';
+            }
+
+            $file = explode('#', $file)[0];
+
+            return $file === '' ? '' : $siteRootUrl . '/' . ltrim($file, '/');
+        };
+
         foreach ($validPoints as $index => $point) {
-            $item = [
-                '@type'    => 'Place',
-                'position' => $index + 1,
-                'name'     => (string) ($point->geotitle ?? ''),
-                'geo'      => [
-                    '@type'     => 'GeoCoordinates',
-                    'latitude'  => (float) $point->latitudemapbox,
-                    'longitude' => (float) $point->longitudemapbox,
-                ],
+            $pointUrl = trim((string) ($point->pointurl ?? ''));
+
+            /*
+             * @id musi być stabilne między odsłonami. Adres podstrony punktu jest
+             * najlepszym kandydatem; gdy go nie ma, zostaje identyfikator złożony
+             * z numeru modułu i pozycji, dzięki czemu dwie mapy na jednej stronie
+             * nie wygenerują tych samych identyfikatorów.
+             */
+            $entityId = $pointUrl !== ''
+                ? rtrim($pointUrl, '/') . '#location'
+                : $siteRootUrl . '/#pposmap-' . $moduleId . '-location-' . ($index + 1);
+
+            $entity = [
+                '@type' => $schemaType,
+                '@id'   => $entityId,
+                'name'  => (string) ($point->geotitle ?? ''),
+            ];
+
+            if ($ownLocations) {
+                $entity['parentOrganization'] = ['@id' => $organizationId];
+            }
+
+            $addressParts = [];
+
+            foreach (
+                [
+                    'streetAddress'   => 'streetaddress',
+                    'postalCode'      => 'postalcode',
+                    'addressLocality' => 'addresslocality',
+                ] as $schemaKey => $field
+            ) {
+                $value = trim((string) ($point->$field ?? ''));
+
+                if ($value !== '') {
+                    $addressParts[$schemaKey] = $value;
+                }
+            }
+
+            if ($addressCountry !== '') {
+                $addressParts['addressCountry'] = $addressCountry;
+            }
+
+            if ($addressParts) {
+                $entity['address'] = array_merge(['@type' => 'PostalAddress'], $addressParts);
+            }
+
+            $entity['geo'] = [
+                '@type'     => 'GeoCoordinates',
+                'latitude'  => (float) $point->latitudemapbox,
+                'longitude' => (float) $point->longitudemapbox,
             ];
 
             if (!empty($point->geodescription)) {
-                $item['description'] = (string) $point->geodescription;
+                $entity['description'] = (string) $point->geodescription;
             }
 
             if (!empty($point->telephonevalue)) {
-                $item['telephone'] = (string) $point->telephonevalue;
+                $entity['telephone'] = (string) $point->telephonevalue;
             }
 
-            $schemaItems[] = $item;
+            $image = $absoluteImageUrl($point->popupimage ?? null);
+
+            if ($image !== '') {
+                $entity['image'] = $image;
+            }
+
+            if ($pointUrl !== '') {
+                $entity['url'] = $pointUrl;
+            }
+
+            // openingHours jest zdefiniowane wyłącznie dla LocalBusiness i CivicStructure,
+            // więc przy typie Place trzeba je pominąć, inaczej walidator zgłosi błąd.
+            if ($schemaType !== 'Place') {
+                $hours = $linesToArray($point->schemaopeninghours ?? '');
+
+                if ($hours) {
+                    $entity['openingHours'] = count($hours) === 1 ? $hours[0] : $hours;
+                }
+            }
+
+            $sameAs = $linesToArray($point->sameas ?? '');
+
+            if ($sameAs) {
+                $entity['sameAs'] = count($sameAs) === 1 ? $sameAs[0] : $sameAs;
+            }
+
+            $schemaGraph[] = $entity;
         }
     }
 
@@ -180,11 +289,10 @@
 
 ?>
 <!-- Start slideshow -->
-<?php if ($addSchema && $schemaItems) : ?>
+<?php if ($addSchema && $schemaGraph) : ?>
 <script type="application/ld+json"><?php echo json_encode([
-    '@context'       => 'https://schema.org',
-    '@type'          => 'ItemList',
-    'itemListElement' => $schemaItems,
+    '@context' => 'https://schema.org',
+    '@graph'   => $schemaGraph,
 ], JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT); ?></script>
 <?php endif; ?>
 <div class="pposmap-container table-pposmap" data-pposmap-id="<?php echo $moduleId; ?>"<?php echo $wrapperStyleAttr; ?>>
