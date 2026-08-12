@@ -24,6 +24,21 @@ function asString(value) {
   return value == null ? "" : String(value);
 }
 
+/*
+ * Opis punktu jest celowo wstawiany jako HTML (pole ma w Joomli filtr safehtml,
+ * ktory odsiewa script i atrybuty zdarzen). Wszystko pozostale, co pochodzi
+ * z ustawien, musi przejsc przez to escapowanie — zwlaszcza tytul, ktory trafia
+ * takze do atrybutu alt obrazka i aria-label.
+ */
+function escapeHtml(value) {
+  return asString(value)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
 const DEFAULT_TILE_URL = "https://tile.openstreetmap.org/{z}/{x}/{y}.png";
 const DEFAULT_TILE_ATTRIBUTION =
   '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors';
@@ -76,13 +91,13 @@ function buildTelephoneLink(phoneValue) {
 
   if (!normalized || normalized === "+") return "";
 
-  return `<a href="tel:${normalized}">${raw}</a>`;
+  return `<a href="tel:${encodeURIComponent(normalized)}">${escapeHtml(raw)}</a>`;
 }
 
 function buildImageHtml(imageObj, title, siteRoot) {
   const file = imageObj && imageObj.imagefile ? String(imageObj.imagefile) : "";
   if (!file) return "";
-  return `<img src="${siteRoot || ""}/${file}" alt="${asString(title)}" />`;
+  return `<img src="${escapeHtml(siteRoot || "")}/${escapeHtml(file)}" alt="${escapeHtml(title)}" />`;
 }
 
 const DEFAULT_MARKER_WIDTH = 50;
@@ -163,11 +178,13 @@ function buildPopupHtml({ title, description, popupimage, openinghours, telephon
   const opening = asString(openinghours).trim();
   const telLink = buildTelephoneLink(telephonevalue);
   const telHtml = telLink ? `<p>tel:${telLink}</p>` : "";
-  const openingHtml = opening ? `<p>${opening}</p>` : "";
+  // Godziny to zwykły tekst (pole ma filtr string), ale każdy wiersz ma być osobną linią.
+  const openingHtml = opening ? `<p>${escapeHtml(opening).replace(/\r?\n/g, "<br>")}</p>` : "";
   const titleClass = variant === "mapbox" ? ' class="mapbox-popup-title"' : "";
   const descriptionClass = variant === "mapbox" ? ' class="mapbox-popup-description"' : "";
 
-  return `${imageHtml}<h3${titleClass}>${asString(title)}</h3><p${descriptionClass}>${asString(description)}</p>${openingHtml}${telHtml}`;
+  // Opis zostaje surowy — to jedyne pole, w którym formatowanie jest zamierzone.
+  return `${imageHtml}<h3${titleClass}>${escapeHtml(title)}</h3><p${descriptionClass}>${asString(description)}</p>${openingHtml}${telHtml}`;
 }
 
 function buildFeatures(originalData) {

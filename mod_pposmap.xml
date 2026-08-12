@@ -128,25 +128,32 @@
                             step="0.000001"
                         >
                         </field>
+                        <!-- Tytuł bez znaczników: w nagłówku listy i dymka nie ma po nich czego szukać. -->
                         <field
                             name="geotitle"
                             type="text"
                             label="MOD_PPOSMAP_GEOTITLE"
-                            filter="raw"
+                            filter="string"
                         >
                         </field>
+                        <!-- safehtml zamiast raw: przepuszcza pogrubienie, odnośniki czy listę,
+                             ale odsiewa script i atrybuty zdarzeń. -->
                         <field
                             name="geodescription"
-                            type="text"
+                            type="textarea"
+                            rows="4"
                             label="MOD_PPOSMAP_GEODESCRIPTION"
-                            filter="raw"
+                            description="MOD_PPOSMAP_GEODESCRIPTION_DESC"
+                            filter="safehtml"
                         >
                         </field>
                         <field
                             name="openinghours"
-                            type="text"
+                            type="textarea"
+                            rows="2"
                             label="MOD_PPOSMAP_OPENINGHOURS"
-                            filter="raw"
+                            description="MOD_PPOSMAP_OPENINGHOURS_DESC"
+                            filter="string"
                         >
                         </field>
                         <field

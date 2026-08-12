@@ -256,8 +256,11 @@
                 'longitude' => (float) $point->longitudemapbox,
             ];
 
-            if (!empty($point->geodescription)) {
-                $entity['description'] = (string) $point->geodescription;
+            // Dane strukturalne opisują treść, nie jej wygląd — znaczniki tu nie należą.
+            $description = trim(strip_tags((string) ($point->geodescription ?? '')));
+
+            if ($description !== '') {
+                $entity['description'] = $description;
             }
 
             if (!empty($point->telephonevalue)) {
@@ -380,9 +383,17 @@
     <div class="pposmap-list">
         <?php foreach ($validPoints as $index => $point) : ?>
         <div class="pposmap-list-item">
-            <h3 class="pposmap-list-item-title"><?php echo $point->geotitle ?? ''; ?></h3>
+            <h3 class="pposmap-list-item-title"><?php echo htmlspecialchars((string) ($point->geotitle ?? ''), ENT_QUOTES, 'UTF-8'); ?></h3>
             <div class="pposmap-list-item-row">
-                <p class="pposmap-list-item-desc"><?php echo $limitString($point->geodescription ?? '', 9); ?></p>
+                <?php
+                    /*
+                     * Na liście idzie czysty tekst. Opis wolno formatować, ale jest tu
+                     * skracany po słowach, więc znacznik zostałby przecięty w połowie
+                     * i pogrubienie rozlałoby się na resztę listy.
+                     */
+                    $listDescription = $limitString(strip_tags((string) ($point->geodescription ?? '')), 9);
+                ?>
+                <p class="pposmap-list-item-desc"><?php echo htmlspecialchars($listDescription, ENT_QUOTES, 'UTF-8'); ?></p>
                 <button
                     type="button"
                     data-index="<?php echo $index; ?>"
