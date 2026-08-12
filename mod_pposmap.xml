@@ -395,6 +395,215 @@
                     <option value="1">JSHOW</option>
                 </field>
             </fieldset>
+            <fieldset name="geojson" label="MOD_PPOSMAP_FIELDSET_GEOJSON">
+                <field
+                    name="geojsonsource"
+                    type="list"
+                    default="0"
+                    label="MOD_PPOSMAP_GEOJSON_SOURCE"
+                    description="MOD_PPOSMAP_GEOJSON_SOURCE_DESC"
+                >
+                    <option value="0">MOD_PPOSMAP_GEOJSON_SOURCE_NONE</option>
+                    <option value="1">MOD_PPOSMAP_GEOJSON_SOURCE_PASTE</option>
+                    <option value="2">MOD_PPOSMAP_GEOJSON_SOURCE_FILE</option>
+                </field>
+                <!--
+                    filter="raw" jest tu konieczne: safehtml/string rozbijają JSON
+                    (encodują cudzysłowy, wycinają < i >), a plik przestaje się parsować.
+                    Treść jest w całości filtrowana po stronie PHP w tmpl/default.php —
+                    tytuły przez strip_tags, opisy przez InputFilter w trybie safehtml.
+                -->
+                <field
+                    name="geojsondata"
+                    type="textarea"
+                    rows="12"
+                    default=""
+                    label="MOD_PPOSMAP_GEOJSON_DATA"
+                    description="MOD_PPOSMAP_GEOJSON_DATA_DESC"
+                    showon="geojsonsource:1"
+                    filter="raw"
+                />
+                <field
+                    name="geojsonfile"
+                    type="text"
+                    default=""
+                    label="MOD_PPOSMAP_GEOJSON_FILE"
+                    description="MOD_PPOSMAP_GEOJSON_FILE_DESC"
+                    showon="geojsonsource:2"
+                    filter="string"
+                />
+                <field
+                    name="geojsonfit"
+                    type="radio"
+                    default="1"
+                    label="MOD_PPOSMAP_GEOJSON_FIT"
+                    description="MOD_PPOSMAP_GEOJSON_FIT_DESC"
+                    showon="geojsonsource!:0"
+                    layout="joomla.form.field.radio.switcher">
+                    <option value="0">JNO</option>
+                    <option value="1">JYES</option>
+                </field>
+
+                <field
+                    name="geojsonstylespacer"
+                    type="note"
+                    heading="h4"
+                    label="MOD_PPOSMAP_GEOJSON_STYLE_LABEL"
+                    description="MOD_PPOSMAP_GEOJSON_STYLE_DESC"
+                    showon="geojsonsource!:0"
+                />
+                <field
+                    name="geojsonstroke"
+                    type="color"
+                    default="#3388ff"
+                    label="MOD_PPOSMAP_GEOJSON_STROKE"
+                    description="MOD_PPOSMAP_GEOJSON_STROKE_DESC"
+                    showon="geojsonsource!:0"
+                />
+                <field
+                    name="geojsonstrokewidth"
+                    type="number"
+                    default="3"
+                    min="0"
+                    max="20"
+                    step="0.5"
+                    label="MOD_PPOSMAP_GEOJSON_STROKE_WIDTH"
+                    showon="geojsonsource!:0"
+                />
+                <field
+                    name="geojsonstrokeopacity"
+                    type="number"
+                    default="1"
+                    min="0"
+                    max="1"
+                    step="0.05"
+                    label="MOD_PPOSMAP_GEOJSON_STROKE_OPACITY"
+                    showon="geojsonsource!:0"
+                />
+                <field
+                    name="geojsonfill"
+                    type="color"
+                    default="#3388ff"
+                    label="MOD_PPOSMAP_GEOJSON_FILL"
+                    description="MOD_PPOSMAP_GEOJSON_FILL_DESC"
+                    showon="geojsonsource!:0"
+                />
+                <field
+                    name="geojsonfillopacity"
+                    type="number"
+                    default="0.2"
+                    min="0"
+                    max="1"
+                    step="0.05"
+                    label="MOD_PPOSMAP_GEOJSON_FILL_OPACITY"
+                    description="MOD_PPOSMAP_GEOJSON_FILL_OPACITY_DESC"
+                    showon="geojsonsource!:0"
+                />
+
+                <field
+                    name="geojsonmappingspacer"
+                    type="note"
+                    heading="h4"
+                    label="MOD_PPOSMAP_GEOJSON_MAPPING_LABEL"
+                    description="MOD_PPOSMAP_GEOJSON_MAPPING_DESC"
+                    showon="geojsonsource!:0"
+                />
+                <field
+                    name="geojsonprop_title"
+                    type="text"
+                    default="name"
+                    label="MOD_PPOSMAP_GEOJSON_PROP_TITLE"
+                    showon="geojsonsource!:0"
+                    filter="string"
+                />
+                <field
+                    name="geojsonprop_description"
+                    type="text"
+                    default="description"
+                    label="MOD_PPOSMAP_GEOJSON_PROP_DESCRIPTION"
+                    showon="geojsonsource!:0"
+                    filter="string"
+                />
+                <field
+                    name="geojsonprop_telephone"
+                    type="text"
+                    default="phone"
+                    label="MOD_PPOSMAP_GEOJSON_PROP_TELEPHONE"
+                    showon="geojsonsource!:0"
+                    filter="string"
+                />
+                <field
+                    name="geojsonprop_openinghours"
+                    type="text"
+                    default="opening_hours"
+                    label="MOD_PPOSMAP_GEOJSON_PROP_OPENINGHOURS"
+                    description="MOD_PPOSMAP_GEOJSON_PROP_OPENINGHOURS_DESC"
+                    showon="geojsonsource!:0"
+                    filter="string"
+                />
+                <field
+                    name="geojsonprop_image"
+                    type="text"
+                    default="image"
+                    label="MOD_PPOSMAP_GEOJSON_PROP_IMAGE"
+                    description="MOD_PPOSMAP_GEOJSON_PROP_IMAGE_DESC"
+                    showon="geojsonsource!:0"
+                    filter="string"
+                />
+                <field
+                    name="geojsonprop_group"
+                    type="text"
+                    default=""
+                    label="MOD_PPOSMAP_GEOJSON_PROP_GROUP"
+                    description="MOD_PPOSMAP_GEOJSON_PROP_GROUP_DESC"
+                    showon="geojsonsource!:0"
+                    filter="string"
+                />
+
+                <field
+                    name="geojsonschema"
+                    type="radio"
+                    default="1"
+                    label="MOD_PPOSMAP_GEOJSON_SCHEMA"
+                    description="MOD_PPOSMAP_GEOJSON_SCHEMA_DESC"
+                    showon="geojsonsource!:0"
+                    layout="joomla.form.field.radio.switcher">
+                    <option value="0">JNO</option>
+                    <option value="1">JYES</option>
+                </field>
+                <field
+                    name="geojsonprop_street"
+                    type="text"
+                    default="addr:street"
+                    label="MOD_PPOSMAP_GEOJSON_PROP_STREET"
+                    showon="geojsonsource!:0[AND]geojsonschema:1"
+                    filter="string"
+                />
+                <field
+                    name="geojsonprop_postalcode"
+                    type="text"
+                    default="addr:postcode"
+                    label="MOD_PPOSMAP_GEOJSON_PROP_POSTALCODE"
+                    showon="geojsonsource!:0[AND]geojsonschema:1"
+                    filter="string"
+                />
+                <field
+                    name="geojsonprop_locality"
+                    type="text"
+                    default="addr:city"
+                    label="MOD_PPOSMAP_GEOJSON_PROP_LOCALITY"
+                    showon="geojsonsource!:0[AND]geojsonschema:1"
+                    filter="string"
+                />
+                <field
+                    name="geojsonprop_url"
+                    type="text"
+                    default="website"
+                    label="MOD_PPOSMAP_GEOJSON_PROP_URL"
+                    showon="geojsonsource!:0[AND]geojsonschema:1"
+                    filter="string"
+                />
+            </fieldset>
             <fieldset name="about" label="MOD_PPOSMAP_FIELDSET_ABOUT">
                 <field
                     name="pposmap_about_intro"
@@ -431,6 +640,13 @@
                     heading="h4"
                     label="MOD_PPOSMAP_ABOUT_SCHEMA_LABEL"
                     description="MOD_PPOSMAP_ABOUT_SCHEMA_DESC"
+                />
+                <field
+                    name="pposmap_about_geojson"
+                    type="note"
+                    heading="h4"
+                    label="MOD_PPOSMAP_ABOUT_GEOJSON_LABEL"
+                    description="MOD_PPOSMAP_ABOUT_GEOJSON_DESC"
                 />
                 <field
                     name="pposmap_about_updates"

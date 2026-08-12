@@ -9,6 +9,7 @@
      */
 
     defined('_JEXEC') or die;
+    use Joomla\CMS\Filter\InputFilter;
     use Joomla\CMS\Language\Text;
     use Joomla\CMS\Uri\Uri;
 
@@ -72,6 +73,243 @@
         }
 
         $validPoints[] = $point;
+    }
+
+    /*
+     * ---------------------------------------------------------------------
+     * GeoJSON
+     * ---------------------------------------------------------------------
+     * Plik jest parsowany po stronie PHP, a nie w przeglądarce, bo punkty z niego
+     * mają trafiać także do listy pod mapą i do danych strukturalnych — a te
+     * powstają tutaj. Punkty (Point/MultiPoint) są normalizowane do dokładnie tej
+     * samej struktury co wiersze subformu i DOPISYWANE NA KOŃCU $validPoints.
+     * Dzięki temu lista, blok Schema.org i tablica features w custom.js indeksują
+     * się tak samo, bez żadnej dodatkowej logiki po stronie JS.
+     *
+     * Geometrie liniowe i powierzchniowe nie mają czego szukać na liście punktów,
+     * więc idą osobnym kanałem ($shapeFeatures) prosto do warstwy mapy.
+     */
+    $geojsonSource   = (string) $params->get('geojsonsource', '0');
+    $geojsonSchema   = (string) $params->get('geojsonschema', '1') === '1';
+    $shapeFeatures   = [];
+    $geojsonOffset   = count($validPoints);
+    $geojsonWarning  = '';
+
+    if ($geojsonSource === '1' || $geojsonSource === '2') {
+        $geojsonRaw = '';
+
+        if ($geojsonSource === '1') {
+            $geojsonRaw = (string) $params->get('geojsondata', '');
+        } else {
+            /*
+             * Tylko pliki spod katalogu Joomli i tylko z rozszerzeniem .json/.geojson.
+             * realpath() rozwija ".." zanim porównamy ścieżki, więc wpisanie
+             * "../../etc/passwd" nie wychodzi poza witrynę. Świadomie NIE pobieramy
+             * plików z adresów zewnętrznych: przy parsowaniu serwerowym oznaczałoby to
+             * zapytanie HTTP przy każdym wyświetleniu strony.
+             */
+            $relative = ltrim(str_replace('\\', '/', trim((string) $params->get('geojsonfile', ''))), '/');
+            $rootReal = realpath(JPATH_ROOT);
+
+            if ($relative !== '' && $rootReal !== false && preg_match('/\.(geo)?json$/i', $relative)) {
+                $fullPath = realpath(JPATH_ROOT . '/' . $relative);
+
+                if ($fullPath !== false
+                    && strpos($fullPath, $rootReal . DIRECTORY_SEPARATOR) === 0
+                    && is_file($fullPath)
+                    && is_readable($fullPath)
+                ) {
+                    $geojsonRaw = (string) file_get_contents($fullPath);
+                } else {
+                    $geojsonWarning = 'mod_pposmap: nie można odczytać pliku GeoJSON "' . $relative . '".';
+                }
+            } elseif ($relative !== '') {
+                $geojsonWarning = 'mod_pposmap: ścieżka pliku GeoJSON musi kończyć się na .json albo .geojson.';
+            }
+        }
+
+        $geojsonRaw = trim($geojsonRaw);
+
+        if ($geojsonRaw !== '') {
+            $decoded = json_decode($geojsonRaw);
+
+            if ($decoded === null && json_last_error() !== JSON_ERROR_NONE) {
+                $geojsonWarning = 'mod_pposmap: GeoJSON jest nieprawidłowy (' . json_last_error_msg() . ').';
+                $decoded        = null;
+            }
+
+            if (is_object($decoded)) {
+                // FeatureCollection → Feature → geometria. GeometryCollection jest rozbijana,
+                // a właściwości nadrzędnego Feature powielane na każdą geometrię składową.
+                $flatten = static function ($node) use (&$flatten) {
+                    $out  = [];
+                    $type = is_object($node) && isset($node->type) ? (string) $node->type : '';
+
+                    if ($type === 'FeatureCollection') {
+                        foreach ((array) ($node->features ?? []) as $child) {
+                            $out = array_merge($out, $flatten($child));
+                        }
+
+                        return $out;
+                    }
+
+                    if ($type === 'Feature') {
+                        $geometry = $node->geometry ?? null;
+
+                        if (!is_object($geometry)) {
+                            return $out;
+                        }
+
+                        $properties = is_object($node->properties ?? null) ? $node->properties : new \stdClass();
+
+                        if ((string) ($geometry->type ?? '') === 'GeometryCollection') {
+                            foreach ((array) ($geometry->geometries ?? []) as $child) {
+                                if (is_object($child)) {
+                                    $out[] = ['geometry' => $child, 'properties' => $properties];
+                                }
+                            }
+
+                            return $out;
+                        }
+
+                        $out[] = ['geometry' => $geometry, 'properties' => $properties];
+
+                        return $out;
+                    }
+
+                    if ($type === 'GeometryCollection') {
+                        foreach ((array) ($node->geometries ?? []) as $child) {
+                            $out = array_merge($out, $flatten($child));
+                        }
+
+                        return $out;
+                    }
+
+                    if (in_array($type, ['Point', 'MultiPoint', 'LineString', 'MultiLineString', 'Polygon', 'MultiPolygon'], true)) {
+                        $out[] = ['geometry' => $node, 'properties' => new \stdClass()];
+                    }
+
+                    return $out;
+                };
+
+                // Nazwy właściwości są konfigurowalne, bo każde źródło nazywa je inaczej:
+                // Google My Maps daje "name"/"description", eksport z OpenStreetMap "addr:street" itd.
+                $map = [];
+
+                foreach (['title', 'description', 'telephone', 'openinghours', 'image', 'group', 'street', 'postalcode', 'locality', 'url'] as $key) {
+                    $map[$key] = trim((string) $params->get('geojsonprop_' . $key, ''));
+                }
+
+                $readProp = static function ($properties, $key) {
+                    if ($key === '' || !is_object($properties) || !isset($properties->$key)) {
+                        return '';
+                    }
+
+                    $value = $properties->$key;
+
+                    return is_scalar($value) ? trim((string) $value) : '';
+                };
+
+                /*
+                 * Treść z GeoJSON-a nie przeszła przez filtry JForm, bo pole źródłowe
+                 * musi być raw (inaczej JSON się rozsypuje). Filtrujemy więc ręcznie,
+                 * dokładnie tak, jak Joomla filtruje odpowiedniki z subformu: tytuł
+                 * jak "string", opis jak "safehtml" — opis trafia do dymka jako HTML.
+                 */
+                $safeHtml = InputFilter::getInstance([], [], 1, 1);
+
+                // Klucze simplestyle-spec (geojson.io, Google My Maps, GitHub) —
+                // przepuszczane bez zmian, żeby styl pojedynczego obiektu mógł nadpisać
+                // ustawienia modułu. Wartość nienumeryczna/niebędąca tekstem jest pomijana.
+                $styleKeys = ['stroke', 'stroke-width', 'stroke-opacity', 'fill', 'fill-opacity'];
+
+                $appendPoint = static function ($lng, $lat, $properties) use (&$validPoints, $map, $readProp, $safeHtml) {
+                    if (!is_numeric($lng) || !is_numeric($lat)) {
+                        return;
+                    }
+
+                    $lng = (float) $lng;
+                    $lat = (float) $lat;
+
+                    // Zamienione miejscami współrzędne to najczęstszy błąd w GeoJSON-ie.
+                    // Poza zakresem punkt i tak nie istnieje, więc lepiej go pominąć
+                    // niż postawić pinezkę w losowym miejscu.
+                    if ($lat < -90 || $lat > 90 || $lng < -180 || $lng > 180) {
+                        return;
+                    }
+
+                    $image = $readProp($properties, $map['image']);
+
+                    $validPoints[] = (object) [
+                        'longitudemapbox'    => $lng,
+                        'latitudemapbox'     => $lat,
+                        'geotitle'           => strip_tags($readProp($properties, $map['title'])),
+                        'geodescription'     => $safeHtml->clean($readProp($properties, $map['description']), 'html'),
+                        'openinghours'       => $readProp($properties, $map['openinghours']),
+                        'telephonevalue'     => $readProp($properties, $map['telephone']),
+                        'popupimage'         => $image !== '' ? (object) ['imagefile' => $image] : null,
+                        'pointmarker'        => null,
+                        'layergroup'         => $readProp($properties, $map['group']),
+                        'streetaddress'      => $readProp($properties, $map['street']),
+                        'postalcode'         => $readProp($properties, $map['postalcode']),
+                        'addresslocality'    => $readProp($properties, $map['locality']),
+                        'schemaopeninghours' => '',
+                        'pointurl'           => $readProp($properties, $map['url']),
+                        'sameas'             => '',
+                    ];
+                };
+
+                foreach ($flatten($decoded) as $entry) {
+                    $geometry    = $entry['geometry'];
+                    $properties  = $entry['properties'];
+                    $type        = (string) ($geometry->type ?? '');
+                    $coordinates = $geometry->coordinates ?? null;
+
+                    if ($type === 'Point') {
+                        if (is_array($coordinates) && count($coordinates) >= 2) {
+                            $appendPoint($coordinates[0], $coordinates[1], $properties);
+                        }
+
+                        continue;
+                    }
+
+                    if ($type === 'MultiPoint') {
+                        foreach ((array) $coordinates as $pair) {
+                            if (is_array($pair) && count($pair) >= 2) {
+                                $appendPoint($pair[0], $pair[1], $properties);
+                            }
+                        }
+
+                        continue;
+                    }
+
+                    if ($coordinates === null) {
+                        continue;
+                    }
+
+                    $shapeProperties = [
+                        'title'       => strip_tags($readProp($properties, $map['title'])),
+                        'description' => $safeHtml->clean($readProp($properties, $map['description']), 'html'),
+                    ];
+
+                    foreach ($styleKeys as $styleKey) {
+                        $value = $readProp($properties, $styleKey);
+
+                        if ($value !== '') {
+                            // stroke-width i *-opacity muszą dojść do Mapboksa jako liczby,
+                            // bo wyrażenie coalesce w warstwie oczekuje typu liczbowego.
+                            $shapeProperties[$styleKey] = is_numeric($value) ? (float) $value : $value;
+                        }
+                    }
+
+                    $shapeFeatures[] = [
+                        'type'       => 'Feature',
+                        'geometry'   => $geometry,
+                        'properties' => $shapeProperties,
+                    ];
+                }
+            }
+        }
     }
 
     /*
@@ -204,6 +442,19 @@
         };
 
         foreach ($validPoints as $index => $point) {
+            /*
+             * Punkty z GeoJSON-a leżą na końcu tablicy, od $geojsonOffset w górę.
+             * Wpis bez nazwy pomijamy nawet przy włączonej opcji: węzeł niosący same
+             * współrzędne nie mówi wyszukiwarce nic, a rozdyma blok danych strukturalnych.
+             * Typowy plik z obrysami albo trasami nie ma właściwości z nazwą i wtedy
+             * do JSON-LD nie trafia z niego nic — i tak ma być.
+             */
+            if ($index >= $geojsonOffset
+                && (!$geojsonSchema || trim((string) ($point->geotitle ?? '')) === '')
+            ) {
+                continue;
+            }
+
             $pointUrl = trim((string) ($point->pointurl ?? ''));
 
             /*
@@ -366,6 +617,22 @@
         'tilemaxzoom'     => $tileMaxZoom,
         'allFilterLeaflet' => Text::_('MOD_PPOSMAP_GROUP_LEAFLET_ALL'),
         'siteRoot'        => rtrim(Uri::root(), '/'),
+
+        /*
+         * Same geometrie liniowe i powierzchniowe — punkty z GeoJSON-a poszły już
+         * wyżej, w listofpoints. Pusta tablica features oznacza dla custom.js
+         * "nie ma czego rysować" i nie powoduje dodania warstw.
+         */
+        'geojsonshapes'   => ['type' => 'FeatureCollection', 'features' => $shapeFeatures],
+        'geojsonstyle'    => [
+            'stroke'        => trim((string) $params->get('geojsonstroke', '#3388ff')),
+            'strokeWidth'   => (float) $params->get('geojsonstrokewidth', 3),
+            'strokeOpacity' => (float) $params->get('geojsonstrokeopacity', 1),
+            'fill'          => trim((string) $params->get('geojsonfill', '#3388ff')),
+            'fillOpacity'   => (float) $params->get('geojsonfillopacity', 0.2),
+        ],
+        'geojsonfit'      => (string) $params->get('geojsonfit', '1'),
+        'geojsonwarning'  => $geojsonWarning,
     ]);
 
     $wa->useScript('mod_pposmap.custom');
@@ -382,6 +649,20 @@
     <?php if ($pointslistmapbox && $validPoints) : ?>
     <div class="pposmap-list">
         <?php foreach ($validPoints as $index => $point) : ?>
+        <?php
+            /*
+             * Punkt bez tytułu i bez opisu dałby pustą pozycję z samym przyciskiem.
+             * Zdarza się to głównie przy plikach GeoJSON, w których obiekty nie mają
+             * żadnych właściwości opisowych. Pominięcie wiersza jest bezpieczne, bo
+             * bindListClick w custom.js czyta indeks z atrybutu data-index i sięga po
+             * features[index] — dziury w numeracji niczego nie psują.
+             */
+            if (trim((string) ($point->geotitle ?? '')) === ''
+                && trim(strip_tags((string) ($point->geodescription ?? ''))) === ''
+            ) {
+                continue;
+            }
+        ?>
         <div class="pposmap-list-item">
             <h3 class="pposmap-list-item-title"><?php echo htmlspecialchars((string) ($point->geotitle ?? ''), ENT_QUOTES, 'UTF-8'); ?></h3>
             <div class="pposmap-list-item-row">

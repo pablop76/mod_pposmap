@@ -100,6 +100,55 @@ Tiles &copy; Esri, Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, A
 > limity ruchu. Do wdrożeń produkcyjnych z realnym obciążeniem wybierz dostawcę z planem i kluczem API
 > (np. MapTiler, Thunderforest, Stadia Maps) albo hostuj kafelki u siebie.
 
+### GeoJSON
+
+Osobna zakładka pozwala wczytać gotowy plik z danymi mapy zamiast dodawać punkty pojedynczo.
+Obsługiwane są wszystkie typy geometrii: `Point`, `MultiPoint`, `LineString`, `MultiLineString`,
+`Polygon`, `MultiPolygon` oraz `GeometryCollection`. Na wejściu przyjmowany jest `FeatureCollection`,
+pojedynczy `Feature` i sama geometria.
+
+- **Źródło danych**: wyłączone / wklejona treść / plik na serwerze.
+	- **Plik na serwerze** to ścieżka względem katalogu Joomli, np. `images/dane/obszary.geojson`.
+		Dozwolone rozszerzenia: `.geojson`, `.json`, wyłącznie spod katalogu witryny.
+		Adresy zewnętrzne nie są obsługiwane, bo oznaczałyby zapytanie HTTP przy każdym renderowaniu strony.
+	- Przy dużych plikach wybieraj plik, nie wklejanie: wklejona treść trafia do parametrów modułu w bazie
+		i do kodu źródłowego każdej strony z mapą.
+- **Dopasuj widok do danych**: mapa sama dobiera środek i przybliżenie tak, żeby zmieściły się wszystkie
+	punkty i obszary. Parametr **Zoom** jest wtedy pomijany.
+- **Wygląd linii i obszarów**: kolor oraz grubość i krycie obrysu, kolor i krycie wypełnienia.
+- **Mapowanie właściwości**: nazwy właściwości, z których moduł czyta tytuł, opis, telefon, godziny,
+	zdjęcie, grupę warstw oraz pola adresowe. Domyślne wartości pasują do eksportu z OpenStreetMap
+	(`addr:street`, `addr:postcode`, `addr:city`, `phone`, `opening_hours`, `website`); Moje Mapy Google
+	używają `name` i `description`.
+
+#### Jak dane z pliku wchodzą do modułu
+
+| Geometria | Mapa | Lista punktów | Schema.org |
+|---|---|---|---|
+| `Point`, `MultiPoint` | pinezka + dymek | tak | tak, gdy włączone i obiekt ma nazwę |
+| `LineString`, `Polygon` i warianty `Multi` | linia / obszar + dymek | nie | nie |
+
+Punkty z pliku są normalizowane do tej samej struktury co wiersze subformu i dopisywane na jego końcu,
+więc lista pod mapą, blok JSON-LD i markery indeksują się wspólnie. Kolejność jest stała: najpierw punkty
+dodane ręcznie, potem te z pliku.
+
+#### Styl pojedynczego obiektu
+
+Właściwości standardu [simplestyle-spec](https://github.com/mapbox/simplestyle-spec) zapisane w samym pliku
+mają pierwszeństwo przed ustawieniami z panelu: `stroke`, `stroke-width`, `stroke-opacity`, `fill`,
+`fill-opacity`. Ustawienia modułu obowiązują wtedy tylko obiekty bez własnego stylu. Pliki z geojson.io
+i z Moich Map Google zapisują te właściwości automatycznie.
+
+#### Pułapki
+
+- **Kolejność współrzędnych.** GeoJSON zapisuje `[długość, szerokość]`, odwrotnie niż Mapy Google.
+	Punkt poza zakresem (`lat` spoza −90…90, `lng` spoza −180…180) jest pomijany, zamiast lądować w losowym miejscu.
+- **Treści z pliku nie przechodzą przez filtry JForm**, bo pole źródłowe musi być `raw` (inaczej JSON się rozsypuje).
+	Moduł filtruje je sam po stronie PHP: tytuł przez `strip_tags`, opis przez `InputFilter` w trybie safehtml.
+- **Obiekt bez nazwy nie trafia do danych strukturalnych** nawet przy włączonej opcji. Węzeł z samymi
+	współrzędnymi nic wyszukiwarce nie mówi, a typowy plik z obrysami nazw nie ma.
+- **Błąd wczytania nie wywraca mapy.** Moduł renderuje się dalej, a powód wypisuje w konsoli przeglądarki.
+
 ### Ustawienia mapy
 
 - **Zoom**: domyślny zoom mapy.

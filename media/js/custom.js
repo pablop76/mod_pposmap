@@ -94,10 +94,25 @@ function buildTelephoneLink(phoneValue) {
   return `<a href="tel:${encodeURIComponent(normalized)}">${escapeHtml(raw)}</a>`;
 }
 
+/*
+ * Pola accessiblemedia trzymają ścieżkę względną wobec katalogu Joomli, ale
+ * właściwość z GeoJSON-a bywa pełnym adresem cudzego serwera albo data: URI.
+ * Doklejenie siteRoot do takiej wartości dałoby adres, którego nikt nie obsłuży.
+ */
+function isAbsoluteUrl(value) {
+  return /^(?:[a-z][a-z0-9+.-]*:|\/\/)/i.test(value);
+}
+
+function withSiteRoot(file, siteRoot) {
+  const value = asString(file).trim();
+  if (!value) return "";
+  return isAbsoluteUrl(value) ? value : `${siteRoot || ""}/${value.replace(/^\/+/, "")}`;
+}
+
 function buildImageHtml(imageObj, title, siteRoot) {
   const file = imageObj && imageObj.imagefile ? String(imageObj.imagefile) : "";
   if (!file) return "";
-  return `<img src="${escapeHtml(siteRoot || "")}/${escapeHtml(file)}" alt="${escapeHtml(title)}" />`;
+  return `<img src="${escapeHtml(withSiteRoot(file, siteRoot))}" alt="${escapeHtml(title)}" />`;
 }
 
 const DEFAULT_MARKER_WIDTH = 50;
@@ -140,7 +155,7 @@ function mediaFile(value) {
 // Pusty wynik oznacza znacznik wbudowany w bibliotekę mapy.
 function resolveMarkerUrl(pointMarker, globalMarker, siteRoot) {
   const file = mediaFile(pointMarker) || mediaFile(globalMarker);
-  return file ? `${siteRoot || ""}/${file}` : "";
+  return file ? withSiteRoot(file, siteRoot) : "";
 }
 
 // Jeden budowniczy elementu dla obu dostawców: Mapbox dostaje go jako element
@@ -221,6 +236,117 @@ function buildFeatures(originalData) {
   }
 
   return features;
+}
+
+/*
+ * Geometrie liniowe i powierzchniowe z GeoJSON-a. Punkty tu nie trafiają — te
+ * przechodzą przez PHP do listofpoints, żeby lista pod mapą i dane strukturalne
+ * indeksowały się tak samo jak markery.
+ */
+function getShapeFeatures(options) {
+  const shapes = options.geojsonshapes;
+  return shapes && Array.isArray(shapes.features) ? shapes.features : [];
+}
+
+const DEFAULT_SHAPE_STYLE = {
+  stroke: "#3388ff",
+  strokeWidth: 3,
+  strokeOpacity: 1,
+  fill: "#3388ff",
+  fillOpacity: 0.2,
+};
+
+function resolveShapeStyle(options) {
+  const style = options.geojsonstyle || {};
+
+  return {
+    stroke: asString(style.stroke).trim() || DEFAULT_SHAPE_STYLE.stroke,
+    strokeWidth: toNumber(style.strokeWidth, DEFAULT_SHAPE_STYLE.strokeWidth),
+    strokeOpacity: toNumber(style.strokeOpacity, DEFAULT_SHAPE_STYLE.strokeOpacity),
+    fill: asString(style.fill).trim() || DEFAULT_SHAPE_STYLE.fill,
+    fillOpacity: toNumber(style.fillOpacity, DEFAULT_SHAPE_STYLE.fillOpacity),
+  };
+}
+
+// Dymek obszaru ma tylko tytuł i opis — reszta pól punktu (godziny, telefon,
+// zdjęcie) nie ma sensu dla granicy gminy czy przebiegu trasy.
+// Opis jest wstawiany jako HTML, bo przeszedł przez filtr safehtml w PHP.
+function buildShapePopupHtml(properties) {
+  const props = properties || {};
+  const title = asString(props.title).trim();
+  const description = asString(props.description).trim();
+
+  if (!title && !description) return "";
+
+  const titleHtml = title ? `<h3>${escapeHtml(title)}</h3>` : "";
+  const descriptionHtml = description ? `<p>${description}</p>` : "";
+
+  return `${titleHtml}${descriptionHtml}`;
+}
+
+/*
+ * Zagnieżdżenie tablicy coordinates zależy od typu geometrii: Point ma [lng, lat],
+ * LineString tablicę par, Polygon tablicę pierścieni, MultiPolygon jeszcze poziom
+ * wyżej. Zamiast rozpisywać każdy typ osobno schodzimy rekurencyjnie do pierwszej
+ * pary liczb.
+ */
+function extendBounds(bounds, coordinates) {
+  if (!Array.isArray(coordinates)) return;
+
+  if (typeof coordinates[0] === "number" && typeof coordinates[1] === "number") {
+    const [lng, lat] = coordinates;
+    if (!Number.isFinite(lng) || !Number.isFinite(lat)) return;
+
+    bounds.minLng = Math.min(bounds.minLng, lng);
+    bounds.maxLng = Math.max(bounds.maxLng, lng);
+    bounds.minLat = Math.min(bounds.minLat, lat);
+    bounds.maxLat = Math.max(bounds.maxLat, lat);
+    return;
+  }
+
+  for (const item of coordinates) {
+    extendBounds(bounds, item);
+  }
+}
+
+function collectBounds(features, shapes) {
+  const bounds = { minLng: Infinity, minLat: Infinity, maxLng: -Infinity, maxLat: -Infinity };
+
+  for (const feature of features) {
+    extendBounds(bounds, feature.geometry.coordinates);
+  }
+
+  for (const feature of shapes) {
+    extendBounds(bounds, feature.geometry && feature.geometry.coordinates);
+  }
+
+  if (!Number.isFinite(bounds.minLng) || !Number.isFinite(bounds.minLat)) {
+    return null;
+  }
+
+  // Jeden punkt albo pionowa/pozioma linia: fitBounds na zerowym prostokącie
+  // przybliża mapę do maksimum, więc taki widok zostawiamy zoomowi z ustawień.
+  bounds.degenerate = bounds.minLng === bounds.maxLng && bounds.minLat === bounds.maxLat;
+
+  return bounds;
+}
+
+// Środek mapy: pierwszy punkt jak dotąd, a przy pliku z samymi obszarami
+// (mapa bez ani jednego punktu) środek prostokąta obejmującego geometrie.
+function resolveCenter(features, bounds) {
+  if (features.length) {
+    return features[0].geometry.coordinates;
+  }
+
+  if (bounds) {
+    return [(bounds.minLng + bounds.maxLng) / 2, (bounds.minLat + bounds.maxLat) / 2];
+  }
+
+  return [0, 0];
+}
+
+function shouldFitBounds(options, bounds) {
+  return asString(options.geojsonfit) === "1" && bounds !== null && !bounds.degenerate;
 }
 
 function bindListClick(container, { features, onSelect }) {
@@ -469,7 +595,80 @@ function addMapboxClusters(map, mapEl, features, markermapbox, siteRoot, size, a
   }
 }
 
-function initMapboxInstance(container, mapEl, options, features) {
+function addMapboxShapes(map, mapEl, shapes, style) {
+  if (!shapes.length) return;
+
+  const sourceId = "pposmap-shapes";
+  const fillLayerId = "pposmap-shapes-fill";
+  const lineLayerId = "pposmap-shapes-line";
+
+  map.addSource(sourceId, {
+    type: "geojson",
+    data: { type: "FeatureCollection", features: shapes },
+  });
+
+  /*
+   * Wyrażenie ["geometry-type"] bywa raportowane raz jako "Polygon", raz jako
+   * "MultiPolygon" — zależnie od tego, czy dane przeszły przez kafelkowanie.
+   * Wymieniamy więc obie formy; nadmiarowa pozycja w match nic nie kosztuje,
+   * a brakująca cicho gubi całą geometrię.
+   */
+  map.addLayer({
+    id: fillLayerId,
+    type: "fill",
+    source: sourceId,
+    filter: ["match", ["geometry-type"], ["Polygon", "MultiPolygon"], true, false],
+    paint: {
+      // coalesce pozwala pojedynczemu obiektowi nadpisać styl modułu własnym
+      // kluczem simplestyle-spec (stroke, fill, fill-opacity...), bez rozbijania
+      // źródła na osobną warstwę dla każdego obiektu.
+      "fill-color": ["coalesce", ["get", "fill"], style.fill],
+      "fill-opacity": ["coalesce", ["get", "fill-opacity"], style.fillOpacity],
+    },
+  });
+
+  // Wielokąty są i w tej warstwie: fill rysuje samo wypełnienie, obrys wymaga line.
+  map.addLayer({
+    id: lineLayerId,
+    type: "line",
+    source: sourceId,
+    filter: [
+      "match",
+      ["geometry-type"],
+      ["LineString", "MultiLineString", "Polygon", "MultiPolygon"],
+      true,
+      false,
+    ],
+    layout: { "line-join": "round", "line-cap": "round" },
+    paint: {
+      "line-color": ["coalesce", ["get", "stroke"], style.stroke],
+      "line-width": ["coalesce", ["get", "stroke-width"], style.strokeWidth],
+      "line-opacity": ["coalesce", ["get", "stroke-opacity"], style.strokeOpacity],
+    },
+  });
+
+  for (const layerId of [fillLayerId, lineLayerId]) {
+    map.on("click", layerId, (event) => {
+      const feature = event.features && event.features[0];
+      if (!feature) return;
+
+      const html = buildShapePopupHtml(feature.properties);
+      if (!html) return;
+
+      // Obszar nie ma jednego punktu, więc dymek otwiera się tam, gdzie kliknięto.
+      new mapboxgl.Popup({ offset: 8 }).setLngLat(event.lngLat).setHTML(html).addTo(map);
+    });
+
+    map.on("mouseenter", layerId, () => {
+      mapEl.style.cursor = "pointer";
+    });
+    map.on("mouseleave", layerId, () => {
+      mapEl.style.cursor = "";
+    });
+  }
+}
+
+function initMapboxInstance(container, mapEl, options, features, shapes, bounds) {
   const { tokenmapbox, stylemapbox, zoommapbox, markermapbox, siteRoot, clustermarkers } = options;
   const zoom = toNumber(zoommapbox, 7);
   const clusteringEnabled = asString(clustermarkers) === "1";
@@ -490,13 +689,28 @@ function initMapboxInstance(container, mapEl, options, features) {
     container: mapEl,
     style: stylemapbox,
     zoom,
-    center: [features[0].geometry.coordinates[0], features[0].geometry.coordinates[1]],
+    center: resolveCenter(features, bounds),
   });
 
   if (clusteringEnabled) {
     map.on("load", () => addMapboxClusters(map, mapEl, features, markermapbox, siteRoot, size, anchor));
   } else {
     addMapboxMarkers(map, features, markermapbox, siteRoot, size, anchor);
+  }
+
+  // addSource wymaga wczytanego stylu, więc kształty dokładamy dopiero po "load".
+  if (shapes.length) {
+    map.on("load", () => addMapboxShapes(map, mapEl, shapes, resolveShapeStyle(options)));
+  }
+
+  if (shouldFitBounds(options, bounds)) {
+    map.fitBounds(
+      [
+        [bounds.minLng, bounds.minLat],
+        [bounds.maxLng, bounds.maxLat],
+      ],
+      { padding: 30, duration: 0 }
+    );
   }
 
   map.addControl(new mapboxgl.NavigationControl());
@@ -526,6 +740,44 @@ function initMapboxInstance(container, mapEl, options, features) {
   });
 }
 
+function addLeafletShapes(L, map, shapes, style) {
+  if (!shapes.length) return null;
+
+  const layer = L.geoJSON(
+    { type: "FeatureCollection", features: shapes },
+    {
+      // Klucze simplestyle-spec w properties obiektu nadpisują ustawienia modułu.
+      style: (feature) => {
+        const props = (feature && feature.properties) || {};
+
+        return {
+          color: asString(props.stroke).trim() || style.stroke,
+          weight: toNumber(props["stroke-width"], style.strokeWidth),
+          opacity: toNumber(props["stroke-opacity"], style.strokeOpacity),
+          fillColor: asString(props.fill).trim() || style.fill,
+          fillOpacity: toNumber(props["fill-opacity"], style.fillOpacity),
+        };
+      },
+      onEachFeature: (feature, featureLayer) => {
+        const html = buildShapePopupHtml(feature && feature.properties);
+
+        if (html) {
+          featureLayer.bindPopup(html);
+        }
+      },
+    }
+  );
+
+  /*
+   * Kształty idą do mapy przed markerami, ale Leaflet i tak trzyma je w niższym
+   * panelu (overlayPane) niż pinezki (markerPane), więc obrys nigdy nie zasłoni
+   * punktu, nawet gdy go obejmuje.
+   */
+  layer.addTo(map);
+
+  return layer;
+}
+
 function createMarkerLayer(L, markerList, clusteringEnabled) {
   if (clusteringEnabled && typeof L.markerClusterGroup === "function") {
     const group = L.markerClusterGroup();
@@ -535,7 +787,7 @@ function createMarkerLayer(L, markerList, clusteringEnabled) {
   return L.layerGroup(markerList);
 }
 
-function initLeafletInstance(container, mapEl, options, features) {
+function initLeafletInstance(container, mapEl, options, features, shapes, bounds) {
   const { zoommapbox, markermapbox, groupscontrol, allFilterLeaflet, siteRoot, clustermarkers } = options;
   const zoom = toNumber(zoommapbox, 7);
   const clusteringEnabled = asString(clustermarkers) === "1";
@@ -570,13 +822,27 @@ function initLeafletInstance(container, mapEl, options, features) {
 
   const allMarkers = createMarkerLayer(L, markers, clusteringEnabled);
   const tiles = buildTileLayer(L, options);
+  const center = resolveCenter(features, bounds);
 
   const map = L.map(mapEl, {
-    center: [features[0].geometry.coordinates[1], features[0].geometry.coordinates[0]],
+    // Leaflet przyjmuje [lat, lng], GeoJSON trzyma [lng, lat] — stąd zamiana.
+    center: [center[1], center[0]],
     zoom,
     layers: [tiles, allMarkers],
     scrollWheelZoom: false,
   });
+
+  addLeafletShapes(L, map, shapes, resolveShapeStyle(options));
+
+  if (shouldFitBounds(options, bounds)) {
+    map.fitBounds(
+      [
+        [bounds.minLat, bounds.minLng],
+        [bounds.maxLat, bounds.maxLng],
+      ],
+      { padding: [20, 20] }
+    );
+  }
 
   bindListClick(container, {
     features,
@@ -627,17 +893,28 @@ function initPposmapInstance(container) {
   const mapEl = container.querySelector(".pposmap-map");
   if (!mapEl) return;
 
+  // Błąd wczytania albo parsowania GeoJSON-a rozpoznaje PHP; do przeglądarki
+  // trafia gotowy komunikat, żeby administrator nie szukał po omacku.
+  if (options.geojsonwarning) {
+    console.warn(options.geojsonwarning);
+  }
+
   const features = buildFeatures(options.listofpoints);
-  if (!features.length) {
+  const shapes = getShapeFeatures(options);
+
+  // Mapa z samymi obszarami, bez ani jednego punktu, jest poprawnym przypadkiem:
+  // granica gminy czy przebieg trasy nie potrzebuje pinezki.
+  if (!features.length && !shapes.length) {
     return;
   }
 
+  const bounds = collectBounds(features, shapes);
   const mode = asString(options.mapboxorleaflet);
 
   if (mode === "0" || mode === "") {
-    initMapboxInstance(container, mapEl, options, features);
+    initMapboxInstance(container, mapEl, options, features, shapes, bounds);
   } else {
-    initLeafletInstance(container, mapEl, options, features);
+    initLeafletInstance(container, mapEl, options, features, shapes, bounds);
   }
 }
 
