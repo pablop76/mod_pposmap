@@ -18,6 +18,22 @@ Moduł obsługuje dwa tryby:
 2. Opublikuj moduł w wybranej pozycji szablonu.
 3. Skonfiguruj parametry modułu.
 
+## Aktualizacje
+
+Moduł ma własny serwer aktualizacji, więc nowe wersje pojawiają się w panelu Joomla tak samo jak
+aktualizacje rozszerzeń z katalogu JED.
+
+- **System → Aktualizuj → Rozszerzenia**, przycisk **Sprawdź aktualizacje** wymusza sprawdzenie od razu.
+- Joomla pobiera paczkę z GitHuba i porównuje jej sumę kontrolną SHA-256 z wartością podaną w `updates.xml`,
+	więc plik uszkodzony albo podmieniony po drodze nie zostanie zainstalowany.
+- Instalacja wymaga kliknięcia: Joomla nie aktualizuje rozszerzeń bez potwierdzenia.
+- Aktualizacja nadpisuje pliki modułu, a ustawienia i dodane punkty zostają nietknięte.
+
+Wykaz wydań: [github.com/pablop76/mod_pposmap/releases](https://github.com/pablop76/mod_pposmap/releases).
+
+Skrócony opis modułu, instrukcja startowa i te same informacje o aktualizacjach są dostępne w panelu
+administratora w zakładce **O module**.
+
 ## Konfiguracja
 
 ### Podstawowe

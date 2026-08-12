@@ -397,6 +397,50 @@
             </fieldset>
             <fieldset name="about" label="MOD_PPOSMAP_FIELDSET_ABOUT">
                 <field
+                    name="pposmap_about_intro"
+                    type="note"
+                    heading="h3"
+                    label="MOD_PPOSMAP_ABOUT_INTRO_LABEL"
+                    description="MOD_PPOSMAP_ABOUT_INTRO_DESC"
+                />
+                <field
+                    name="pposmap_about_start"
+                    type="note"
+                    heading="h4"
+                    label="MOD_PPOSMAP_ABOUT_START_LABEL"
+                    description="MOD_PPOSMAP_ABOUT_START_DESC"
+                />
+                <field
+                    name="pposmap_about_gotchas"
+                    type="note"
+                    heading="h4"
+                    label="MOD_PPOSMAP_ABOUT_GOTCHAS_LABEL"
+                    description="MOD_PPOSMAP_ABOUT_GOTCHAS_DESC"
+                />
+                <field
+                    name="pposmap_about_tiles"
+                    type="note"
+                    heading="h4"
+                    class="alert alert-warning w-100"
+                    label="MOD_PPOSMAP_ABOUT_TILES_LABEL"
+                    description="MOD_PPOSMAP_ABOUT_TILES_DESC"
+                />
+                <field
+                    name="pposmap_about_schema"
+                    type="note"
+                    heading="h4"
+                    label="MOD_PPOSMAP_ABOUT_SCHEMA_LABEL"
+                    description="MOD_PPOSMAP_ABOUT_SCHEMA_DESC"
+                />
+                <field
+                    name="pposmap_about_updates"
+                    type="note"
+                    heading="h4"
+                    class="alert alert-info w-100"
+                    label="MOD_PPOSMAP_ABOUT_UPDATES_LABEL"
+                    description="MOD_PPOSMAP_ABOUT_UPDATES_DESC"
+                />
+                <field
                     name="pposmap_credit"
                     type="note"
                     heading="h4"
