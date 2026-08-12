@@ -74,6 +74,18 @@
         $validPoints[] = $point;
     }
 
+    /*
+     * Moduł przypięty do wszystkich stron powielałby te same lokalizacje w całej
+     * witrynie. Puste pole zachowuje dotychczasowe zachowanie, czyli znacznik
+     * wszędzie tam, gdzie moduł się wyświetla.
+     */
+    $schemaMenuItems = array_filter((array) $params->get('schemamenuitems', []), static fn($id) => (int) $id > 0);
+
+    if ($addSchema && $schemaMenuItems) {
+        $currentItemId = (int) $this->app->getInput()->getInt('Itemid');
+        $addSchema     = in_array($currentItemId, array_map('intval', $schemaMenuItems), true);
+    }
+
     $schemaGraph = [];
 
     if ($addSchema) {
@@ -82,13 +94,15 @@
         $siteRootUrl    = rtrim(Uri::root(), '/');
 
         /*
-         * parentOrganization jest właściwością Organization, a LocalBusiness dziedziczy
-         * i po Organization, i po Place — na gołym Place byłoby więc nieprawidłowe.
-         * Powiązanie z organizacją ma sens tylko dla własnych placówek: podpięcie cudzej
-         * firmy pod swoją organizację wprowadzałoby wyszukiwarkę w błąd.
+         * parentOrganization jest właściwością Organization. LocalBusiness dziedziczy
+         * i po Organization, i po Place, więc tam jest w porządku — ale Place
+         * i TouristAttraction siedzą wyłącznie w gałęzi Place i tam byłoby nieprawidłowe.
+         * Do tego powiązanie z organizacją ma sens tylko dla własnych placówek:
+         * podpięcie cudzej firmy pod swoją organizację wprowadza wyszukiwarkę w błąd.
          */
-        $ownLocations   = $schemaType !== 'Place' && (string) $params->get('schemaownlocations', '0') === '1';
-        $organizationId = $siteRootUrl . '/#organization';
+        $organizationTypes = ['LocalBusiness', 'Store', 'Restaurant', 'MedicalBusiness', 'AutomotiveBusiness', 'ProfessionalService', 'LodgingBusiness'];
+        $ownLocations      = in_array($schemaType, $organizationTypes, true) && (string) $params->get('schemaownlocations', '0') === '1';
+        $organizationId    = $siteRootUrl . '/#organization';
 
         if ($ownLocations) {
             $schemaGraph[] = [
@@ -103,6 +117,76 @@
         // ("Mo,Tu 09:00-12:00"), więc nie może służyć za separator.
         $linesToArray = static function ($value) {
             return array_values(array_filter(array_map('trim', preg_split('/\R/', (string) $value))));
+        };
+
+        /*
+         * Zapis "Mo-Fr 09:00-17:00" rozwijany jest na OpeningHoursSpecification.
+         * Ta właściwość jest zdefiniowana dla Place, więc obsługuje wszystkie typy
+         * oferowane w module — w odróżnieniu od tekstowego openingHours, które
+         * należy wyłącznie do LocalBusiness i CivicStructure.
+         */
+        $weekDays  = ['Mo' => 'Monday', 'Tu' => 'Tuesday', 'We' => 'Wednesday', 'Th' => 'Thursday', 'Fr' => 'Friday', 'Sa' => 'Saturday', 'Su' => 'Sunday'];
+        $weekOrder = array_keys($weekDays);
+
+        $parseOpeningHours = static function ($value) use ($linesToArray, $weekDays, $weekOrder) {
+            $specifications = [];
+
+            foreach ($linesToArray($value) as $line) {
+                if (!preg_match('/^([A-Za-z]{2}(?:\s*[-,]\s*[A-Za-z]{2})*)\s+(\d{1,2}):(\d{2})\s*-\s*(\d{1,2}):(\d{2})$/', trim($line), $matches)) {
+                    // Wiersz w nieznanym formacie jest pomijany; lepiej stracić godziny
+                    // niż wypuścić do wyszukiwarki dane, których nie da się zinterpretować.
+                    continue;
+                }
+
+                $days = [];
+
+                foreach (explode(',', $matches[1]) as $token) {
+                    $token = trim($token);
+
+                    if (strpos($token, '-') === false) {
+                        $key = ucfirst(strtolower($token));
+
+                        if (isset($weekDays[$key])) {
+                            $days[] = $weekDays[$key];
+                        }
+
+                        continue;
+                    }
+
+                    [$from, $to] = array_map(static fn($d) => ucfirst(strtolower(trim($d))), explode('-', $token, 2));
+                    $fromIndex   = array_search($from, $weekOrder, true);
+                    $toIndex     = array_search($to, $weekOrder, true);
+
+                    if ($fromIndex === false || $toIndex === false) {
+                        continue;
+                    }
+
+                    // Modulo obsługuje zakresy przechodzące przez niedzielę, np. "We-Mo".
+                    for ($step = 0; $step < count($weekOrder); $step++) {
+                        $index  = ($fromIndex + $step) % count($weekOrder);
+                        $days[] = $weekDays[$weekOrder[$index]];
+
+                        if ($index === $toIndex) {
+                            break;
+                        }
+                    }
+                }
+
+                $days = array_values(array_unique($days));
+
+                if (!$days) {
+                    continue;
+                }
+
+                $specifications[] = [
+                    '@type'     => 'OpeningHoursSpecification',
+                    'dayOfWeek' => count($days) === 1 ? $days[0] : $days,
+                    'opens'     => sprintf('%02d:%02d', (int) $matches[2], (int) $matches[3]),
+                    'closes'    => sprintf('%02d:%02d', (int) $matches[4], (int) $matches[5]),
+                ];
+            }
+
+            return $specifications;
         };
 
         // Pola typu accessiblemedia trzymają ścieżkę z doklejonym fragmentem
@@ -190,14 +274,10 @@
                 $entity['url'] = $pointUrl;
             }
 
-            // openingHours jest zdefiniowane wyłącznie dla LocalBusiness i CivicStructure,
-            // więc przy typie Place trzeba je pominąć, inaczej walidator zgłosi błąd.
-            if ($schemaType !== 'Place') {
-                $hours = $linesToArray($point->schemaopeninghours ?? '');
+            $openingHours = $parseOpeningHours($point->schemaopeninghours ?? '');
 
-                if ($hours) {
-                    $entity['openingHours'] = count($hours) === 1 ? $hours[0] : $hours;
-                }
+            if ($openingHours) {
+                $entity['openingHoursSpecification'] = count($openingHours) === 1 ? $openingHours[0] : $openingHours;
             }
 
             $sameAs = $linesToArray($point->sameas ?? '');

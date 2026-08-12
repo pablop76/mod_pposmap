@@ -339,17 +339,31 @@
                     showon="addschema:1"
                 >
                     <option value="Place">MOD_PPOSMAP_SCHEMA_TYPE_PLACE</option>
+                    <option value="TouristAttraction">MOD_PPOSMAP_SCHEMA_TYPE_TOURISTATTRACTION</option>
                     <option value="LocalBusiness">MOD_PPOSMAP_SCHEMA_TYPE_LOCALBUSINESS</option>
                     <option value="Store">MOD_PPOSMAP_SCHEMA_TYPE_STORE</option>
                     <option value="Restaurant">MOD_PPOSMAP_SCHEMA_TYPE_RESTAURANT</option>
+                    <option value="MedicalBusiness">MOD_PPOSMAP_SCHEMA_TYPE_MEDICALBUSINESS</option>
+                    <option value="AutomotiveBusiness">MOD_PPOSMAP_SCHEMA_TYPE_AUTOMOTIVEBUSINESS</option>
+                    <option value="ProfessionalService">MOD_PPOSMAP_SCHEMA_TYPE_PROFESSIONALSERVICE</option>
+                    <option value="LodgingBusiness">MOD_PPOSMAP_SCHEMA_TYPE_LODGINGBUSINESS</option>
                 </field>
+                <field
+                    name="schemamenuitems"
+                    type="menuitem"
+                    multiple="true"
+                    default=""
+                    label="MOD_PPOSMAP_SCHEMA_MENU_ITEMS"
+                    description="MOD_PPOSMAP_SCHEMA_MENU_ITEMS_DESC"
+                    showon="addschema:1"
+                />
                 <field
                     name="schemaownlocations"
                     type="radio"
                     default="0"
                     label="MOD_PPOSMAP_SCHEMA_OWN_LOCATIONS"
                     description="MOD_PPOSMAP_SCHEMA_OWN_LOCATIONS_DESC"
-                    showon="addschema:1[AND]schematype!:Place"
+                    showon="addschema:1[AND]schematype!:Place,TouristAttraction"
                     layout="joomla.form.field.radio.switcher">
                     <option value="0">JNO</option>
                     <option value="1">JYES</option>
