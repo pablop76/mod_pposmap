@@ -43,6 +43,10 @@ administratora w zakładce **O module**.
 - **Style Mapbox**: opcjonalnie (np. `mapbox://styles/mapbox/streets-v12`).
 - **Kontrola grup na mapie** (Leaflet): pozwala grupować markery po polu „Nazwa grupy”.
 - **Punkty na mapie**: dodawane w subform (lat/lng, tytuł, opis, godziny, telefon, obrazek, opcjonalnie grupa).
+- **Usuwanie wszystkich punktów**: przycisk pod listą punktów czyści ją w całości, zamiast kasowania wiersz po wierszu.
+	Zabezpieczenia są trzy: pytanie potwierdzające z liczbą punktów, przycisk **Cofnij** przywracający wiersze
+	na ich pierwotne miejsca oraz to, że **nic nie trafia do bazy przed kliknięciem Zapisz** — wyjście z modułu
+	bez zapisywania przywraca punkty.
 
 ### Serwer kafelków (tylko tryb Leaflet)
 

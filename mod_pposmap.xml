@@ -19,7 +19,14 @@
         <folder>css</folder>
     </media>
     <config>
-        <fields name="params">
+        <!--
+            addfieldprefix wskazuje przestrzeń nazw z własnymi polami formularza.
+            Segment "Site" jest obowiązkowy: Joomla rejestruje moduły site pod
+            <namespace>\Site\, także w aplikacji administratora (patrz mapa
+            w cache/autoload_psr4.php). Bez niego pole nie zostanie znalezione,
+            a Joomla po cichu wyrenderuje zwykły input tekstowy.
+        -->
+        <fields name="params" addfieldprefix="Pablop76\Module\Pposmap\Site\Field">
             <fieldset name="basic">
                 <field
                     name="mapboxorleaflet"
@@ -229,6 +236,13 @@
                         </field>
                     </form>
                 </field>
+                <field
+                    name="clearpoints"
+                    type="clearpoints"
+                    target="listofpoints"
+                    label="MOD_PPOSMAP_CLEAR_POINTS"
+                    description="MOD_PPOSMAP_CLEAR_POINTS_DESC"
+                />
             </fieldset>
             <fieldset name="display" label="MOD_PPOSMAP_FIELDSET_DISPLAY">
                 <field

@@ -28,6 +28,15 @@
       "version": "1.2.0"
     },
     {
+      "name": "mod_pposmap.admin",
+      "type": "script",
+      "uri": "mod_pposmap/admin.js",
+      "dependencies": [
+        "core"
+      ],
+      "version": "1.2.0"
+    },
+    {
       "name": "leafletmarkercluster",
       "type": "script",
       "uri": "https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js",
