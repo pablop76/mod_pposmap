@@ -3,7 +3,7 @@
     <name>MOD_PPOSMAP_NAME</name>
     <version>1.4.0</version>
     <author>pablop76</author>
-    <creationDate>12.08.2026</creationDate>
+    <creationDate>06.09.2026</creationDate>
     <description>MOD_PPOSMAP_DESCRIPTION</description>
     <namespace path="src">Pablop76\Module\Pposmap</namespace>
     <files>
