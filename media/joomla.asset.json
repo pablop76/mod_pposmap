@@ -1,21 +1,17 @@
 {
   "$schema": "https://developer.joomla.org/schemas/json-schema/web_assets.json",
   "name": "mod_pposmap",
-  "version": "1.3.0",
+  "version": "1.4.0",
   "description": "Joomla Module OpenStreetMap",
   "license": "GPL-2.0-or-later",
   "assets": [
     {
       "name": "leafletjs",
       "type": "script",
-      "uri": "https://unpkg.com/leaflet@1.9.4/dist/leaflet.js",
+      "uri": "mod_pposmap/vendor/leaflet/leaflet.js",
       "dependencies": [
         "core"
       ],
-      "attributes": {
-        "integrity": "sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=",
-        "crossorigin": "anonymous"
-      },
       "version": "1.9.4"
     },
     {
@@ -25,7 +21,7 @@
       "dependencies": [
         "core"
       ],
-      "version": "1.3.0"
+      "version": "1.4.0"
     },
     {
       "name": "mod_pposmap.admin",
@@ -34,12 +30,12 @@
       "dependencies": [
         "core"
       ],
-      "version": "1.3.0"
+      "version": "1.4.0"
     },
     {
       "name": "leafletmarkercluster",
       "type": "script",
-      "uri": "https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js",
+      "uri": "mod_pposmap/vendor/leaflet.markercluster/leaflet.markercluster.js",
       "dependencies": [
         "leafletjs"
       ],
@@ -57,18 +53,14 @@
     {
       "name": "leafletcss",
       "type": "style",
-      "uri": "https://unpkg.com/leaflet@1.9.4/dist/leaflet.css",
-      "attributes": {
-        "integrity": "sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=",
-        "crossorigin": "anonymous"
-      },
+      "uri": "mod_pposmap/vendor/leaflet/leaflet.css",
       "version": "1.9.4"
     },
     {
       "name": "mod_pposmap.style",
       "type": "style",
       "uri": "mod_pposmap/style.css",
-      "version": "1.3.0"
+      "version": "1.4.0"
     },
     {
       "name": "mapboxglcss",
@@ -79,13 +71,13 @@
     {
       "name": "leafletmarkerclustercss",
       "type": "style",
-      "uri": "https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css",
+      "uri": "mod_pposmap/vendor/leaflet.markercluster/MarkerCluster.css",
       "version": "1.5.3"
     },
     {
       "name": "leafletmarkerclusterdefaultcss",
       "type": "style",
-      "uri": "https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css",
+      "uri": "mod_pposmap/vendor/leaflet.markercluster/MarkerCluster.Default.css",
       "version": "1.5.3"
     }
   ]

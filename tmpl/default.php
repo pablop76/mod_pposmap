@@ -589,13 +589,63 @@
         $wa->useScript('mapboxgljs');
         $wa->useStyle('mapboxglcss');
     } else {
-        $wa->useScript('leafletjs');
-        $wa->useStyle('leafletcss');
+        /*
+         * Leaflet z własnego serwera albo z CDN-a, do wyboru w ustawieniach.
+         *
+         * Domyślnie lokalnie, bo tak działa zawsze: nie blokuje go polityka
+         * bezpieczeństwa treści (CSP), nie zależy od cudzej usługi i nie wysyła
+         * adresu odwiedzającego do zewnętrznego dostawcy. Dawny argument, że CDN
+         * jest szybszy dzięki współdzielonej pamięci przeglądarki, przestał
+         * obowiązywać: przeglądarki dzielą tę pamięć per witryna od 2020 roku.
+         *
+         * Tryb CDN zostaje dla tych, którzy mają własne lustro albo świadomie
+         * wolą zewnętrzny serwer. Adres jest polem, więc działa też jsDelivr
+         * czy prywatne lustro o układzie ścieżek zgodnym z npm.
+         *
+         * Sumy kontrolne zostają także przy własnym adresie: pliki tych wersji
+         * są bajt w bajt takie same na każdym lustrze, a gdyby serwer podał coś
+         * innego, przeglądarka odmówi wykonania. Lepsza głośna odmowa niż cicho
+         * podmieniony skrypt.
+         */
+        $libSource = (string) $params->get('libsource', 'local');
 
-        if ((string) $clustermarkers === '1') {
-            $wa->useScript('leafletmarkercluster');
-            $wa->useStyle('leafletmarkerclustercss');
-            $wa->useStyle('leafletmarkerclusterdefaultcss');
+        if ($libSource === 'cdn') {
+            $cdnBase = rtrim(trim((string) $params->get('cdnbase', 'https://unpkg.com/')), '/') . '/';
+
+            $wa->registerAndUseScript(
+                'leafletjs.cdn',
+                $cdnBase . 'leaflet@1.9.4/dist/leaflet.js',
+                [],
+                ['integrity' => 'sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=', 'crossorigin' => 'anonymous'],
+                ['core']
+            );
+            $wa->registerAndUseStyle(
+                'leafletcss.cdn',
+                $cdnBase . 'leaflet@1.9.4/dist/leaflet.css',
+                [],
+                ['integrity' => 'sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=', 'crossorigin' => 'anonymous']
+            );
+
+            if ((string) $clustermarkers === '1') {
+                $wa->registerAndUseScript(
+                    'leafletmarkercluster.cdn',
+                    $cdnBase . 'leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js',
+                    [],
+                    ['crossorigin' => 'anonymous'],
+                    ['leafletjs.cdn']
+                );
+                $wa->registerAndUseStyle('leafletmarkerclustercss.cdn', $cdnBase . 'leaflet.markercluster@1.5.3/dist/MarkerCluster.css');
+                $wa->registerAndUseStyle('leafletmarkerclusterdefaultcss.cdn', $cdnBase . 'leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css');
+            }
+        } else {
+            $wa->useScript('leafletjs');
+            $wa->useStyle('leafletcss');
+
+            if ((string) $clustermarkers === '1') {
+                $wa->useScript('leafletmarkercluster');
+                $wa->useStyle('leafletmarkerclustercss');
+                $wa->useStyle('leafletmarkerclusterdefaultcss');
+            }
         }
     }
 

@@ -48,6 +48,32 @@ administratora w zakładce **O module**.
 	na ich pierwotne miejsca oraz to, że **nic nie trafia do bazy przed kliknięciem Zapisz** — wyjście z modułu
 	bez zapisywania przywraca punkty.
 
+### Źródło bibliotek (tylko tryb Leaflet)
+
+Leaflet może się wczytywać **z własnego serwera** (domyślnie) albo **z CDN-a**.
+
+Domyślne jest lokalne, bo działa zawsze:
+
+- nie blokuje go polityka bezpieczeństwa treści (CSP), która na wielu stronach
+	dopuszcza skrypty i style tylko z własnej domeny,
+- nie zależy od cudzej usługi, która może być niedostępna,
+- nie wysyła adresu IP odwiedzającego do zewnętrznego dostawcy, więc nie dokłada
+	pozycji do polityki prywatności,
+- działa na środowisku lokalnym bez internetu.
+
+Dawny argument, że CDN jest szybszy, bo plik leży już w pamięci przeglądarki po
+wizycie na innej stronie, **przestał obowiązywać**: od 2020 roku przeglądarki
+dzielą tę pamięć osobno dla każdej witryny.
+
+**Adres CDN** to adres podstawowy o układzie ścieżek zgodnym z npm. Moduł dopisuje
+do niego resztę, na przykład `leaflet@1.9.4/dist/leaflet.js`. Działa `unpkg.com`,
+`cdn.jsdelivr.net/npm` oraz własne lustro.
+
+> Przy trybie CDN moduł dokłada sumy kontrolne (SRI) plików Leafleta. Adres musi
+> więc serwować oryginalne pliki tych wersji. Podmieniony plik przeglądarka
+> odrzuci, i tak ma być: lepiej, żeby mapa się nie wczytała, niż żeby wykonał się
+> cudzy kod.
+
 ### Serwer kafelków (tylko tryb Leaflet)
 
 - **Adres serwera kafelków**: szablon adresu z polami `{z}/{x}/{y}`, np. `https://tile.thunderforest.com/cycle/{z}/{x}/{y}.png?apikey=KLUCZ`.
