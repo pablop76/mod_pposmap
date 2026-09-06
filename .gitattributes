@@ -1,0 +1,6 @@
+# Biblioteki zewnętrzne zostają bajt w bajt takie, jakie wydał ich autor.
+# Bez tego git normalizuje końce wierszy przy zapisie do katalogu roboczego,
+# plik przestaje być identyczny z oryginałem, a jego suma kontrolna (SRI)
+# przestaje się zgadzać z tą podawaną przy trybie CDN.
+media/js/vendor/**   -text
+media/css/vendor/**  -text
