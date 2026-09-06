@@ -6,14 +6,14 @@
         <element>mod_pposmap</element>
         <type>module</type>
         <client>site</client>
-        <version>1.3.0</version>
+        <version>1.4.0</version>
         <infourl title="Pposmap">https://github.com/pablop76/mod_pposmap</infourl>
         <targetplatform name="joomla" version="(4\.4|5\.[0-9]+|6\.[0-9]+)"/>
         <php_minimum>7.4.0</php_minimum>
         <downloads>
-            <downloadurl type="full" format="zip">https://github.com/pablop76/mod_pposmap/releases/download/v1.3.0/mod_pposmap-1.3.0.zip</downloadurl>
+            <downloadurl type="full" format="zip">https://github.com/pablop76/mod_pposmap/releases/download/v1.4.0/mod_pposmap-1.4.0.zip</downloadurl>
         </downloads>
-        <sha256>7e0995fe13041e56fafb98719eac8fd8092a0d1cf258c297af00ae75b2e7a68f</sha256>
+        <sha256>9db0132f090a17292efd2a0ecc22ffadff39671be7aadcdd41fe0ed770563fa1</sha256>
         <tags>
             <tag>stable</tag>
         </tags>
